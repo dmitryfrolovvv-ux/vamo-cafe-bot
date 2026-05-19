@@ -11,7 +11,7 @@ dp = Dispatcher(bot)
 user_language = {}
 user_cart = {}
 
-ADMIN_ID = 123456789  # потом заменим
+ADMIN_ID = 1472777680  # потом заменим
 
 # ---------- LANGUAGES ----------
 
