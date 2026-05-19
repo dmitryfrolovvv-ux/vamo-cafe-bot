@@ -1,212 +1,205 @@
-from aiogram import Bot, Dispatcher, F
-from aiogram.enums import ParseMode
-from aiogram.client.default import DefaultBotProperties
-from aiogram.types import (
-    Message,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-    CallbackQuery,
-)
-from aiohttp import web
-import asyncio
 import os
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.utils import executor
 
 TOKEN = os.getenv("BOT_TOKEN")
 
-bot = Bot(
-    token=TOKEN,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
+bot = Bot(token=TOKEN)
+dp = Dispatcher(bot)
 
-dp = Dispatcher()
+user_language = {}
+user_cart = {}
 
-# =========================
-# TEMP CART STORAGE
-# =========================
+ADMIN_ID = 123456789  # потом заменим
 
-user_carts = {}
+# ---------- LANGUAGES ----------
 
-# =========================
-# PRODUCTS
-# =========================
+language_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+language_keyboard.add("🇷🇺 Русский")
+language_keyboard.add("🇹🇷 Türkçe")
+language_keyboard.add("🇬🇧 English")
+language_keyboard.add("🇩🇪 Deutsch")
 
-products = {
-    "classic_hotdog": {
-        "name": "🌭 Classic Hot Dog",
-        "price": 150
-    },
-    "cheese_hotdog": {
-        "name": "🧀 Cheese Hot Dog",
-        "price": 180
-    },
-    "double_hotdog": {
-        "name": "🌭🌭 Double Hot Dog",
-        "price": 220
-    }
-}
+# ---------- MAIN MENU ----------
 
-# =========================
-# LANGUAGE KEYBOARD
-# =========================
+def get_main_menu():
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("🌭 Hot Dogs")
+    kb.add("🌯 Shawarma")
+    kb.add("🥟 Chebureki")
+    kb.add("🥤 Drinks")
+    kb.add("🛒 Cart")
+    kb.add("🌐 Change Language")
+    return kb
 
-language_keyboard = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang_ru")],
-        [InlineKeyboardButton(text="🇹🇷 Türkçe", callback_data="lang_tr")],
-        [InlineKeyboardButton(text="🇬🇧 English", callback_data="lang_en")],
-        [InlineKeyboardButton(text="🇩🇪 Deutsch", callback_data="lang_de")],
-    ]
-)
+# ---------- BACK BUTTON ----------
 
-# =========================
-# MAIN MENU
-# =========================
+def back_keyboard():
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("⬅ Back")
+    return kb
 
-main_menu = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="🌭 Hot Dogs", callback_data="hotdogs")],
-        [InlineKeyboardButton(text="🌯 Shawarma", callback_data="shawarma")],
-        [InlineKeyboardButton(text="🥟 Chebureki", callback_data="chebureki")],
-        [InlineKeyboardButton(text="🥤 Drinks", callback_data="drinks")],
-        [InlineKeyboardButton(text="🛒 Cart", callback_data="cart")],
-        [InlineKeyboardButton(text="🌐 Change Language", callback_data="change_language")]
-    ]
-)
+# ---------- START ----------
 
-# =========================
-# BACK MENU
-# =========================
-
-back_menu = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="⬅ Back", callback_data="back_main")]
-    ]
-)
-
-# =========================
-# HOTDOG MENU
-# =========================
-
-hotdog_menu = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="➕ Classic Hot Dog — 150 TL",
-                callback_data="add_classic_hotdog"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="➕ Cheese Hot Dog — 180 TL",
-                callback_data="add_cheese_hotdog"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="➕ Double Hot Dog — 220 TL",
-                callback_data="add_double_hotdog"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="⬅ Back",
-                callback_data="back_main"
-            )
-        ]
-    ]
-)
-
-# =========================
-# START
-# =========================
-
-@dp.message(F.text == "/start")
-async def start_handler(message: Message):
-
+@dp.message_handler(commands=["start"])
+async def start(message: types.Message):
     await message.answer(
         "👋 Welcome to VAMO Cafe!\n\nChoose language:",
         reply_markup=language_keyboard
     )
 
-# =========================
-# LANGUAGE SELECT
-# =========================
+# ---------- LANGUAGE ----------
 
-@dp.callback_query(F.data.startswith("lang_"))
-async def language_selected(callback: CallbackQuery):
+@dp.message_handler(lambda message: message.text in [
+    "🇷🇺 Русский",
+    "🇹🇷 Türkçe",
+    "🇬🇧 English",
+    "🇩🇪 Deutsch"
+])
+async def language_selected(message: types.Message):
+    user_language[message.from_user.id] = message.text
+    user_cart[message.from_user.id] = []
 
-    await callback.answer()
-
-    await callback.message.edit_text(
+    await message.answer(
         "✅ Language selected!\n\nChoose category:",
-        reply_markup=main_menu
+        reply_markup=get_main_menu()
     )
 
-# =========================
-# CHANGE LANGUAGE
-# =========================
+# ---------- CHANGE LANGUAGE ----------
 
-@dp.callback_query(F.data == "change_language")
-async def change_language(callback: CallbackQuery):
-
-    await callback.answer()
-
-    await callback.message.edit_text(
-        "🌐 Choose language:",
+@dp.message_handler(lambda message: message.text == "🌐 Change Language")
+async def change_language(message: types.Message):
+    await message.answer(
+        "🌍 Choose new language:",
         reply_markup=language_keyboard
     )
 
-# =========================
-# HOTDOGS
-# =========================
+# ---------- HOT DOGS ----------
 
-@dp.callback_query(F.data == "hotdogs")
-async def hotdogs(callback: CallbackQuery):
-
-    await callback.answer()
-
-    await callback.message.edit_text(
-        "🌭 Hot Dogs Menu\n\nChoose product:",
-        reply_markup=hotdog_menu
+@dp.message_handler(lambda message: message.text == "🌭 Hot Dogs")
+async def hotdogs(message: types.Message):
+    text = (
+        "🌭 Hot Dogs Menu\n\n"
+        "1️⃣ Classic Hot Dog — 150 TL\n"
+        "2️⃣ Cheese Hot Dog — 180 TL\n"
+        "3️⃣ Double Hot Dog — 220 TL"
     )
 
-# =========================
-# ADD TO CART
-# =========================
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("Classic Hot Dog")
+    kb.add("Cheese Hot Dog")
+    kb.add("Double Hot Dog")
+    kb.add("⬅ Back")
 
-@dp.callback_query(F.data.startswith("add_"))
-async def add_to_cart(callback: CallbackQuery):
+    await message.answer(text, reply_markup=kb)
 
-    user_id = callback.from_user.id
+# ---------- SHAWARMA ----------
 
-    product_key = callback.data.replace("add_", "")
+@dp.message_handler(lambda message: message.text == "🌯 Shawarma")
+async def shawarma(message: types.Message):
+    text = (
+        "🌯 Shawarma Menu\n\n"
+        "1️⃣ Chicken Shawarma — 200 TL\n"
+        "2️⃣ Beef Shawarma — 250 TL\n"
+        "3️⃣ Mega Shawarma — 320 TL"
+    )
 
-    product = products[product_key]
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("Chicken Shawarma")
+    kb.add("Beef Shawarma")
+    kb.add("Mega Shawarma")
+    kb.add("⬅ Back")
 
-    if user_id not in user_carts:
-        user_carts[user_id] = []
+    await message.answer(text, reply_markup=kb)
 
-    user_carts[user_id].append(product)
+# ---------- CHEBUREKI ----------
 
-    await callback.answer("Added to cart ✅")
+@dp.message_handler(lambda message: message.text == "🥟 Chebureki")
+async def chebureki(message: types.Message):
+    text = (
+        "🥟 Chebureki Menu\n\n"
+        "1️⃣ Beef Cheburek — 170 TL\n"
+        "2️⃣ Cheese Cheburek — 150 TL\n"
+        "3️⃣ Mixed Cheburek — 190 TL"
+    )
 
-# =========================
-# CART
-# =========================
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("Beef Cheburek")
+    kb.add("Cheese Cheburek")
+    kb.add("Mixed Cheburek")
+    kb.add("⬅ Back")
 
-@dp.callback_query(F.data == "cart")
-async def cart(callback: CallbackQuery):
+    await message.answer(text, reply_markup=kb)
 
-    await callback.answer()
+# ---------- DRINKS ----------
 
-    user_id = callback.from_user.id
+@dp.message_handler(lambda message: message.text == "🥤 Drinks")
+async def drinks(message: types.Message):
+    text = (
+        "🥤 Drinks Menu\n\n"
+        "1️⃣ Cola — 50 TL\n"
+        "2️⃣ Ayran — 40 TL\n"
+        "3️⃣ Water — 20 TL"
+    )
 
-    cart_items = user_carts.get(user_id, [])
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("Cola")
+    kb.add("Ayran")
+    kb.add("Water")
+    kb.add("⬅ Back")
+
+    await message.answer(text, reply_markup=kb)
+
+# ---------- ADD TO CART ----------
+
+prices = {
+    "Classic Hot Dog": 150,
+    "Cheese Hot Dog": 180,
+    "Double Hot Dog": 220,
+
+    "Chicken Shawarma": 200,
+    "Beef Shawarma": 250,
+    "Mega Shawarma": 320,
+
+    "Beef Cheburek": 170,
+    "Cheese Cheburek": 150,
+    "Mixed Cheburek": 190,
+
+    "Cola": 50,
+    "Ayran": 40,
+    "Water": 20
+}
+
+@dp.message_handler(lambda message: message.text in prices)
+async def add_to_cart(message: types.Message):
+    user_id = message.from_user.id
+
+    if user_id not in user_cart:
+        user_cart[user_id] = []
+
+    item = message.text
+    price = prices[item]
+
+    user_cart[user_id].append((item, price))
+
+    await message.answer(
+        f"✅ {item} added to cart!\n💰 {price} TL",
+        reply_markup=get_main_menu()
+    )
+
+# ---------- CART ----------
+
+@dp.message_handler(lambda message: message.text == "🛒 Cart")
+async def cart(message: types.Message):
+    user_id = message.from_user.id
+
+    cart_items = user_cart.get(user_id, [])
 
     if not cart_items:
-        await callback.message.edit_text(
-            "🛒 Your cart is empty.",
-            reply_markup=back_menu
+        await message.answer(
+            "🛒 Your cart is empty!",
+            reply_markup=get_main_menu()
         )
         return
 
@@ -214,127 +207,84 @@ async def cart(callback: CallbackQuery):
 
     total = 0
 
-    for item in cart_items:
-        text += f"{item['name']} — {item['price']} TL\n"
-        total += item['price']
+    for item, price in cart_items:
+        text += f"🌭 {item} — {price} TL\n"
+        total += price
 
     text += f"\n💰 Total: {total} TL"
 
-    cart_keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="🗑 Clear Cart",
-                    callback_data="clear_cart"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="⬅ Back",
-                    callback_data="back_main"
-                )
-            ]
-        ]
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("✅ Checkout")
+    kb.add("🗑 Clear Cart")
+    kb.add("⬅ Back")
+
+    await message.answer(text, reply_markup=kb)
+
+# ---------- CLEAR CART ----------
+
+@dp.message_handler(lambda message: message.text == "🗑 Clear Cart")
+async def clear_cart(message: types.Message):
+    user_cart[message.from_user.id] = []
+
+    await message.answer(
+        "🗑 Cart cleared!",
+        reply_markup=get_main_menu()
     )
 
-    await callback.message.edit_text(
-        text,
-        reply_markup=cart_keyboard
+# ---------- CHECKOUT ----------
+
+@dp.message_handler(lambda message: message.text == "✅ Checkout")
+async def checkout(message: types.Message):
+    await message.answer(
+        "📞 Send your phone number:",
+        reply_markup=back_keyboard()
     )
 
-# =========================
-# CLEAR CART
-# =========================
+# ---------- PHONE ----------
 
-@dp.callback_query(F.data == "clear_cart")
-async def clear_cart(callback: CallbackQuery):
+@dp.message_handler(lambda message: message.text.startswith("+"))
+async def phone(message: types.Message):
+    user_id = message.from_user.id
 
-    user_id = callback.from_user.id
+    if user_id not in user_cart:
+        return
 
-    user_carts[user_id] = []
+    phone_number = message.text
 
-    await callback.answer("Cart cleared 🗑")
+    cart_items = user_cart[user_id]
 
-    await callback.message.edit_text(
-        "🛒 Cart cleared.",
-        reply_markup=back_menu
+    text = "🛍 NEW ORDER\n\n"
+
+    total = 0
+
+    for item, price in cart_items:
+        text += f"• {item} — {price} TL\n"
+        total += price
+
+    text += f"\n💰 Total: {total} TL"
+    text += f"\n📞 Phone: {phone_number}"
+    text += f"\n👤 User: @{message.from_user.username}"
+
+    await bot.send_message(ADMIN_ID, text)
+
+    user_cart[user_id] = []
+
+    await message.answer(
+        "✅ Order sent successfully!\n\nVAMO Cafe will contact you soon.",
+        reply_markup=get_main_menu()
     )
 
-# =========================
-# OTHER CATEGORIES
-# =========================
+# ---------- BACK ----------
 
-@dp.callback_query(F.data == "shawarma")
-async def shawarma(callback: CallbackQuery):
-
-    await callback.answer()
-
-    await callback.message.edit_text(
-        "🌯 Shawarma Menu\n\nComing soon...",
-        reply_markup=back_menu
+@dp.message_handler(lambda message: message.text == "⬅ Back")
+async def back(message: types.Message):
+    await message.answer(
+        "⬅ Returned to main menu",
+        reply_markup=get_main_menu()
     )
 
-@dp.callback_query(F.data == "chebureki")
-async def chebureki(callback: CallbackQuery):
-
-    await callback.answer()
-
-    await callback.message.edit_text(
-        "🥟 Chebureki Menu\n\nComing soon...",
-        reply_markup=back_menu
-    )
-
-@dp.callback_query(F.data == "drinks")
-async def drinks(callback: CallbackQuery):
-
-    await callback.answer()
-
-    await callback.message.edit_text(
-        "🥤 Drinks Menu\n\nComing soon...",
-        reply_markup=back_menu
-    )
-
-# =========================
-# BACK TO MAIN MENU
-# =========================
-
-@dp.callback_query(F.data == "back_main")
-async def back_main(callback: CallbackQuery):
-
-    await callback.answer()
-
-    await callback.message.edit_text(
-        "✅ Language selected!\n\nChoose category:",
-        reply_markup=main_menu
-    )
-
-# =========================
-# HEALTHCHECK
-# =========================
-
-async def healthcheck(request):
-    return web.Response(text="VAMO Cafe Bot is running")
-
-# =========================
-# MAIN
-# =========================
-
-async def main():
-
-    print("VAMO Cafe Bot started")
-
-    app = web.Application()
-    app.router.add_get("/", healthcheck)
-
-    runner = web.AppRunner(app)
-    await runner.setup()
-
-    port = int(os.environ.get("PORT", 10000))
-
-    site = web.TCPSite(runner, "0.0.0.0", port)
-    await site.start()
-
-    await dp.start_polling(bot)
+# ---------- RUN ----------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    print("VAMO Cafe Bot started")
+    executor.start_polling(dp, skip_updates=True)
