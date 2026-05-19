@@ -89,11 +89,17 @@ main_menu = InlineKeyboardMarkup(
                 callback_data="cart"
             )
         ],
+        [
+            InlineKeyboardButton(
+                text="🌐 Change Language",
+                callback_data="change_language"
+            )
+        ]
     ]
 )
 
 # =========================
-# BACK BUTTON
+# BACK MENU
 # =========================
 
 back_menu = InlineKeyboardMarkup(
@@ -131,6 +137,20 @@ async def language_selected(callback: CallbackQuery):
     await callback.message.edit_text(
         "✅ Language selected!\n\nChoose category:",
         reply_markup=main_menu
+    )
+
+# =========================
+# CHANGE LANGUAGE
+# =========================
+
+@dp.callback_query(F.data == "change_language")
+async def change_language(callback: CallbackQuery):
+
+    await callback.answer()
+
+    await callback.message.edit_text(
+        "🌐 Choose language:",
+        reply_markup=language_keyboard
     )
 
 # =========================
