@@ -1,10 +1,11 @@
 # =========================================
 # VAMO CAFE BOT
-# FULL MAIN.PY
+# FULL STABLE MAIN.PY
 # =========================================
 
 import logging
 import psycopg2
+import os
 
 from flask import Flask
 from threading import Thread
@@ -56,6 +57,7 @@ def run_web():
 # =========================================
 
 conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+
 cur = conn.cursor()
 
 cur.execute("""
@@ -111,13 +113,13 @@ class AdminState(StatesGroup):
     waiting_delete_product = State()
 
 # =========================================
-# TEMP DATA
+# TEMP
 # =========================================
 
 temp_product = {}
 
 # =========================================
-# MAIN MENU
+# MENUS
 # =========================================
 
 def main_menu():
@@ -134,10 +136,6 @@ def main_menu():
     kb.add(KeyboardButton("🛒 CART"))
 
     return kb
-
-# =========================================
-# ADMIN MENU
-# =========================================
 
 def admin_menu():
 
@@ -169,7 +167,7 @@ async def start(message: types.Message):
     )
 
 # =========================================
-# ADMIN PANEL
+# ADMIN
 # =========================================
 
 @dp.message_handler(commands=["admin"])
@@ -204,7 +202,10 @@ async def save_category(message: types.Message, state: FSMContext):
 
     conn.commit()
 
-    await message.answer("✅ Category added")
+    await message.answer(
+        "✅ Category added",
+        reply_markup=admin_menu()
+    )
 
     await state.finish()
 
@@ -236,7 +237,10 @@ async def remove_category(message: types.Message, state: FSMContext):
 
     conn.commit()
 
-    await message.answer("✅ Category deleted")
+    await message.answer(
+        "✅ Category deleted",
+        reply_markup=admin_menu()
+    )
 
     await state.finish()
 
@@ -284,32 +288,42 @@ async def get_product_name(message: types.Message, state: FSMContext):
 @dp.message_handler(state=AdminState.waiting_product_price)
 async def get_product_price(message: types.Message, state: FSMContext):
 
-    category = temp_product["category"]
+    try:
 
-    name = temp_product["name"]
+        category = temp_product["category"]
 
-    price = int(message.text)
+        name = temp_product["name"]
 
-    cur.execute(
-        """
-        INSERT INTO products(category, product_name, price)
-        VALUES(%s,%s,%s)
-        """,
-        (
-            category,
-            name,
-            price
+        price = int(message.text)
+
+        cur.execute(
+            """
+            INSERT INTO products(category, product_name, price)
+            VALUES(%s,%s,%s)
+            """,
+            (
+                category,
+                name,
+                price
+            )
         )
-    )
 
-    conn.commit()
+        conn.commit()
 
-    await message.answer(
-        "✅ Product added",
-        reply_markup=admin_menu()
-    )
+        await message.answer(
+            "✅ Product added",
+            reply_markup=admin_menu()
+        )
 
-    await state.finish()
+        await state.finish()
+
+    except Exception as e:
+
+        conn.rollback()
+
+        await state.finish()
+
+        await message.answer(str(e))
 
 # =========================================
 # DELETE PRODUCT
@@ -332,7 +346,10 @@ async def remove_product(message: types.Message, state: FSMContext):
 
     conn.commit()
 
-    await message.answer("✅ Product deleted")
+    await message.answer(
+        "✅ Product deleted",
+        reply_markup=admin_menu()
+    )
 
     await state.finish()
 
@@ -379,19 +396,10 @@ async def statistics(message: types.Message):
 
     orders_count = cur.fetchone()[0]
 
-    cur.execute("SELECT SUM(price) FROM cart")
-
-    total = cur.fetchone()[0]
-
-    if total is None:
-        total = 0
-
     text = f"""
 📊 Statistics
 
 📦 Orders: {orders_count}
-
-💰 Income: {total} TL
 """
 
     await message.answer(text)
@@ -448,8 +456,6 @@ async def category_handler(message: types.Message):
 
         conn.rollback()
 
-        print(e)
-
         await message.answer(str(e))
 
 # =========================================
@@ -495,8 +501,6 @@ async def add_to_cart(message: types.Message):
     except Exception as e:
 
         conn.rollback()
-
-        print(e)
 
         await message.answer(str(e))
 
@@ -546,7 +550,6 @@ async def cart_handler(message: types.Message):
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
         kb.add(KeyboardButton("CHECKOUT"))
-
         kb.add(KeyboardButton("⬅ Back"))
 
         await message.answer(text, reply_markup=kb)
@@ -554,8 +557,6 @@ async def cart_handler(message: types.Message):
     except Exception as e:
 
         conn.rollback()
-
-        print(e)
 
         await message.answer(str(e))
 
@@ -566,7 +567,7 @@ async def cart_handler(message: types.Message):
 @dp.message_handler(lambda m: m.text == "CHECKOUT")
 async def checkout(message: types.Message):
 
-    await message.answer("📍 Enter your address")
+    await message.answer("📍 Enter address")
 
     await OrderState.waiting_address.set()
 
@@ -675,20 +676,25 @@ async def finish_order(message: types.Message, state: FSMContext):
 
         conn.commit()
 
+        await state.finish()
+
         await message.answer(
             "✅ Order sent successfully!",
             reply_markup=main_menu()
         )
 
-        await state.finish()
-
     except Exception as e:
 
         conn.rollback()
 
+        await state.finish()
+
         print(e)
 
-        await message.answer(str(e))
+        await message.answer(
+            str(e),
+            reply_markup=main_menu()
+        )
 
 # =========================================
 # BACK
