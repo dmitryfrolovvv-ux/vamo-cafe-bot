@@ -120,7 +120,7 @@ def main_menu():
         )
 
     kb.add(
-        KeyboardButton("🛒 Cart")
+        KeyboardButton("CART")
     )
 
     return kb
@@ -134,27 +134,27 @@ def admin_menu():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
     kb.add(
-        KeyboardButton("➕ Add Category")
+        KeyboardButton("ADD CATEGORY")
     )
 
     kb.add(
-        KeyboardButton("❌ Delete Category")
+        KeyboardButton("DELETE CATEGORY")
     )
 
     kb.add(
-        KeyboardButton("➕ Add Product")
+        KeyboardButton("ADD PRODUCT")
     )
 
     kb.add(
-        KeyboardButton("📦 Orders")
+        KeyboardButton("ORDERS")
     )
 
     kb.add(
-        KeyboardButton("📊 Statistics")
+        KeyboardButton("STATISTICS")
     )
 
     kb.add(
-        KeyboardButton("⬅ Back")
+        KeyboardButton("BACK")
     )
 
     return kb
@@ -201,7 +201,7 @@ async def universal(message: types.Message):
     # BACK
     # =====================================
 
-    if text == "⬅ Back":
+    if text == "BACK":
 
         await message.answer(
             "⬅ Main menu",
@@ -214,7 +214,7 @@ async def universal(message: types.Message):
     # CART
     # =====================================
 
-    if text == "🛒 Cart":
+    if text == "CART":
 
         cart_items = user_carts.get(user_id, [])
 
@@ -255,11 +255,11 @@ async def universal(message: types.Message):
         )
 
         kb.add(
-            KeyboardButton("✅ Checkout")
+            KeyboardButton("CHECKOUT")
         )
 
         kb.add(
-            KeyboardButton("⬅ Back")
+            KeyboardButton("BACK")
         )
 
         await message.answer(
@@ -273,7 +273,7 @@ async def universal(message: types.Message):
     # CHECKOUT
     # =====================================
 
-    if "Checkout" in text:
+    if text == "CHECKOUT":
 
         cart_items = user_carts.get(user_id, [])
 
@@ -352,12 +352,12 @@ async def universal(message: types.Message):
     # ADD CATEGORY
     # =====================================
 
-    if text == "➕ Add Category":
+    if text == "ADD CATEGORY":
 
         admin_states[user_id] = "add_category"
 
         await message.answer(
-            "📂 Enter category name"
+            "Enter category name"
         )
 
         return
@@ -366,7 +366,7 @@ async def universal(message: types.Message):
     # DELETE CATEGORY
     # =====================================
 
-    if text == "❌ Delete Category":
+    if text == "DELETE CATEGORY":
 
         cur.execute("SELECT name FROM categories")
 
@@ -383,11 +383,11 @@ async def universal(message: types.Message):
             )
 
         kb.add(
-            KeyboardButton("⬅ Back")
+            KeyboardButton("BACK")
         )
 
         await message.answer(
-            "❌ Select category",
+            "Select category",
             reply_markup=kb
         )
 
@@ -424,7 +424,7 @@ async def universal(message: types.Message):
     # ADD PRODUCT
     # =====================================
 
-    if text == "➕ Add Product":
+    if text == "ADD PRODUCT":
 
         cur.execute("SELECT name FROM categories")
 
@@ -441,13 +441,13 @@ async def universal(message: types.Message):
             )
 
         kb.add(
-            KeyboardButton("⬅ Back")
+            KeyboardButton("BACK")
         )
 
         admin_states[user_id] = "choose_category"
 
         await message.answer(
-            "📂 Select category",
+            "Select category",
             reply_markup=kb
         )
 
@@ -489,7 +489,7 @@ async def universal(message: types.Message):
         }
 
         await message.answer(
-            "🍔 Enter product name"
+            "Enter product name"
         )
 
         return
@@ -507,7 +507,7 @@ async def universal(message: types.Message):
             state["step"] = "product_price"
 
             await message.answer(
-                "💰 Enter price"
+                "Enter price"
             )
 
             return
@@ -521,7 +521,7 @@ async def universal(message: types.Message):
             except:
 
                 await message.answer(
-                    "❌ Enter number"
+                    "Enter number"
                 )
 
                 return
@@ -554,7 +554,7 @@ async def universal(message: types.Message):
     # ORDERS
     # =====================================
 
-    if text == "📦 Orders":
+    if text == "ORDERS":
 
         cur.execute("""
         SELECT full_name,total
@@ -567,7 +567,7 @@ async def universal(message: types.Message):
 
         if not orders:
 
-            await message.answer("❌ No orders")
+            await message.answer("No orders")
             return
 
         msg = "📦 LAST ORDERS\n\n"
@@ -584,7 +584,7 @@ async def universal(message: types.Message):
     # STATS
     # =====================================
 
-    if text == "📊 Statistics":
+    if text == "STATISTICS":
 
         cur.execute("SELECT COUNT(*) FROM orders")
 
@@ -638,7 +638,7 @@ async def universal(message: types.Message):
             )
 
         kb.add(
-            KeyboardButton("⬅ Back")
+            KeyboardButton("BACK")
         )
 
         await message.answer(
