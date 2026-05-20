@@ -629,9 +629,10 @@ async def get_phone(message: types.Message):
     )
 
     keyboard.add(location_btn)
+    keyboard.add("Skip")
 
     await message.answer(
-        "📍 Please send your location.",
+        "📍 Please send your location or press Skip.",
         reply_markup=keyboard
     )
 
@@ -661,15 +662,94 @@ async def get_location(message: types.Message):
     )
 
 # =========================
+# SKIP LOCATION
+# =========================
+
+@dp.message_handler(lambda message:
+    user_states.get(message.from_user.id) == "waiting_location"
+)
+async def skip_location(message: types.Message):
+
+    user_id = message.from_user.id
+
+    user_data[user_id]["latitude"] = "Not provided"
+    user_data[user_id]["longitude"] = "Not provided"
+
+    user_states[user_id] = "waiting_address"
+
+    await message.answer(
+        "🏠 Enter delivery address:",
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+# =========================
 # ADDRESS
 # =========================
 
-@dp.message_handler(lambda message: user_states.get(message.from_user.id) == "waiting_address")
+@dp.message_handler(lambda message:
+    user_states.get(message.from_user.id) == "waiting_address"
+)
 async def get_address(message: types.Message):
 
     user_id = message.from_user.id
 
     user_data[user_id]["address"] = message.text
+
+    user_states[user_id] = "waiting_complex_code"
+
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("Skip")
+
+    await message.answer(
+        "🏢 Enter complex/gate code (optional):",
+        reply_markup=keyboard
+    )
+
+# =========================
+# COMPLEX CODE
+# =========================
+
+@dp.message_handler(lambda message:
+    user_states.get(message.from_user.id) == "waiting_complex_code"
+)
+async def get_complex_code(message: types.Message):
+
+    user_id = message.from_user.id
+
+    if message.text.lower() == "skip":
+        complex_code = "Not provided"
+    else:
+        complex_code = message.text
+
+    user_data[user_id]["complex_code"] = complex_code
+
+    user_states[user_id] = "waiting_door_code"
+
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("Skip")
+
+    await message.answer(
+        "🚪 Enter apartment door code (optional):",
+        reply_markup=keyboard
+    )
+
+# =========================
+# DOOR CODE
+# =========================
+
+@dp.message_handler(lambda message:
+    user_states.get(message.from_user.id) == "waiting_door_code"
+)
+async def get_door_code(message: types.Message):
+
+    user_id = message.from_user.id
+
+    if message.text.lower() == "skip":
+        door_code = "Not provided"
+    else:
+        door_code = message.text
+
+    user_data[user_id]["door_code"] = door_code
 
     cart = carts.get(user_id, [])
 
@@ -686,11 +766,22 @@ async def get_address(message: types.Message):
 
     order_text += f"\n🏠 Address: {user_data[user_id]['address']}"
 
+    if user_data[user_id]["latitude"] != "Not provided":
+        order_text += (
+            f"\n📍 Location:\n"
+            f"https://maps.google.com/?q="
+            f"{user_data[user_id]['latitude']},"
+            f"{user_data[user_id]['longitude']}"
+        )
+
     order_text += (
-        f"\n📍 Location:\n"
-        f"https://maps.google.com/?q="
-        f"{user_data[user_id]['latitude']},"
-        f"{user_data[user_id]['longitude']}"
+        f"\n🏢 Complex code: "
+        f"{user_data[user_id]['complex_code']}"
+    )
+
+    order_text += (
+        f"\n🚪 Door code: "
+        f"{user_data[user_id]['door_code']}"
     )
 
     order_text += (
