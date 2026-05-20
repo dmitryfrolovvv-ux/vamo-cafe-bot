@@ -61,12 +61,7 @@ conn = psycopg2.connect(
 
 cur = conn.cursor()
 
-register_admin(
-    dp,
-    conn,
-    cur,
-    main_menu
-)
+register_admin(dp, conn, cur, main_menu)
 
 # =========================
 # STATES
