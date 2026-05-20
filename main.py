@@ -1,6 +1,5 @@
 import os
 import logging
-import asyncio
 import psycopg2
 
 from flask import Flask
@@ -17,28 +16,28 @@ from aiogram.types import ReplyKeyboardMarkup
 # =========================
 
 BOT_TOKEN = "8729557900:AAGQceOGd-V5erYJpSXV5M95wrFU_JeMd4Q"
-ADMIN_ID = 1472777680
+ADMIN_ID = 5199302693
 
 DATABASE_URL = "postgresql://postgres.gtglvcebuvuampyhtaze:froLOV580530.@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
 logging.basicConfig(level=logging.INFO)
 
 # =========================
-# FLASK FOR RENDER
+# FLASK
 # =========================
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Bot is running"
+    return "Bot is alive"
 
 def run_web():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
 # =========================
-# TELEGRAM BOT
+# BOT
 # =========================
 
 bot = Bot(token=BOT_TOKEN)
@@ -96,10 +95,11 @@ def create_default_categories():
     ]
 
     for cat in categories:
-        cur.execute(
-            "INSERT INTO categories (name) VALUES (%s) ON CONFLICT DO NOTHING",
-            (cat,)
-        )
+        cur.execute("""
+        INSERT INTO categories (name)
+        VALUES (%s)
+        ON CONFLICT DO NOTHING
+        """, (cat,))
 
     conn.commit()
 
@@ -122,8 +122,14 @@ class AdminStates(StatesGroup):
 # =========================
 
 def get_categories():
-    cur.execute("SELECT name FROM categories ORDER BY id")
+    cur.execute("""
+    SELECT name
+    FROM categories
+    ORDER BY id
+    """)
+
     rows = cur.fetchall()
+
     return [r[0] for r in rows]
 
 def main_menu():
@@ -158,12 +164,14 @@ async def show_products(message: types.Message):
     category = message.text
 
     cur.execute("""
-    SELECT name, price
+    SELECT id, name, price
     FROM products
     WHERE category=%s
     """, (category,))
 
     products = cur.fetchall()
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
     text = f"{category}\n\n"
 
@@ -171,9 +179,18 @@ async def show_products(message: types.Message):
         text += "No products"
 
     for p in products:
-        text += f"• {p[0]} — {p[1]} TL\n"
+        product_button = f"{p[1]} — {p[2]} TL"
 
-    await message.answer(text)
+        kb.add(product_button)
+
+        text += f"• {product_button}\n"
+
+    kb.add("⬅️ Back")
+
+    await message.answer(
+        text,
+        reply_markup=kb
+    )
 
 # =========================
 # ADMIN PANEL
@@ -202,7 +219,7 @@ async def admin_panel(message: types.Message):
     )
 
 # =========================
-# CATEGORIES MENU
+# CATEGORIES PANEL
 # =========================
 
 @dp.message_handler(lambda m: m.text == "📂 Categories")
@@ -260,7 +277,8 @@ async def add_category_finish(message: types.Message, state: FSMContext):
     conn.commit()
 
     await message.answer(
-        "✅ Category added"
+        "✅ Category added",
+        reply_markup=main_menu()
     )
 
     await state.finish()
@@ -283,7 +301,7 @@ async def delete_category_start(message: types.Message):
     await AdminStates.delete_category.set()
 
     await message.answer(
-        "❌ Select category to delete",
+        "❌ Select category",
         reply_markup=kb
     )
 
@@ -291,15 +309,15 @@ async def delete_category_start(message: types.Message):
 async def delete_category_finish(message: types.Message, state: FSMContext):
     category = message.text
 
-    cur.execute(
-        "DELETE FROM categories WHERE name=%s",
-        (category,)
-    )
+    cur.execute("""
+    DELETE FROM categories
+    WHERE name=%s
+    """, (category,))
 
-    cur.execute(
-        "DELETE FROM products WHERE category=%s",
-        (category,)
-    )
+    cur.execute("""
+    DELETE FROM products
+    WHERE category=%s
+    """, (category,))
 
     conn.commit()
 
@@ -333,14 +351,12 @@ async def add_product_start(message: types.Message):
     )
 
 # =========================
-# SELECT PRODUCT CATEGORY
+# PRODUCT CATEGORY
 # =========================
 
 @dp.message_handler(state=AdminStates.add_product_category)
 async def add_product_category(message: types.Message, state: FSMContext):
-    category = message.text
-
-    await state.update_data(category=category)
+    await state.update_data(category=message.text)
 
     await AdminStates.add_product_name.set()
 
@@ -408,12 +424,10 @@ async def delete_product(message: types.Message):
 
     products = cur.fetchall()
 
-    text = "❌ Products:\n\n"
+    text = "❌ Products\n\n"
 
     for p in products:
         text += f"{p[0]}. {p[1]} — {p[2]} TL\n"
-
-    text += "\nDelete manually in database for now"
 
     await message.answer(text)
 
@@ -430,15 +444,15 @@ async def orders(message: types.Message):
     LIMIT 10
     """)
 
-    orders = cur.fetchall()
+    rows = cur.fetchall()
 
     text = "📦 LAST ORDERS\n\n"
 
-    if not orders:
+    if not rows:
         text += "No orders"
 
-    for o in orders:
-        text += f"#{o[0]} | {o[1]} | {o[2]} TL\n"
+    for r in rows:
+        text += f"#{r[0]} | {r[1]} | {r[2]} TL\n"
 
     await message.answer(text)
 
