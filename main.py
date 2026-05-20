@@ -51,6 +51,10 @@ conn = psycopg2.connect(
 
 cur = conn.cursor()
 
+# =========================
+# ORDERS TABLE
+# =========================
+
 cur.execute("""
 CREATE TABLE IF NOT EXISTS orders (
     id SERIAL PRIMARY KEY,
@@ -67,37 +71,93 @@ CREATE TABLE IF NOT EXISTS orders (
 )
 """)
 
+# =========================
+# PRODUCTS TABLE
+# =========================
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    category TEXT,
+    name TEXT,
+    price INTEGER
+)
+""")
+
 conn.commit()
 
 # =========================
-# MENU
+# DEFAULT PRODUCTS
 # =========================
 
-menu = {
+cur.execute("SELECT COUNT(*) FROM products")
 
-    "🌭 Hot Dogs": {
-        "Classic Hot Dog": 150,
-        "Cheese Hot Dog": 180,
-        "Double Hot Dog": 220
-    },
+count_products = cur.fetchone()[0]
 
-    "🌯 Shawarma": {
-        "Chicken Shawarma": 200,
-        "Big Shawarma": 260
-    },
+if count_products == 0:
 
-    "🥟 Chebureki": {
-        "Classic Chebureki": 140,
-        "Cheese Chebureki": 160,
-        "Meat Chebureki": 190
-    },
+    default_products = [
 
-    "🥤 Drinks": {
-        "Cola": 60,
-        "Ayran": 50,
-        "Water": 30
-    }
-}
+        ("🌭 Hot Dogs", "Classic Hot Dog", 150),
+        ("🌭 Hot Dogs", "Cheese Hot Dog", 180),
+        ("🌭 Hot Dogs", "Double Hot Dog", 220),
+
+        ("🌯 Shawarma", "Chicken Shawarma", 200),
+        ("🌯 Shawarma", "Big Shawarma", 260),
+
+        ("🥟 Chebureki", "Classic Chebureki", 140),
+        ("🥟 Chebureki", "Cheese Chebureki", 160),
+        ("🥟 Chebureki", "Meat Chebureki", 190),
+
+        ("🥤 Drinks", "Cola", 60),
+        ("🥤 Drinks", "Ayran", 50),
+        ("🥤 Drinks", "Water", 30)
+
+    ]
+
+    for product in default_products:
+
+        cur.execute("""
+        INSERT INTO products (
+            category,
+            name,
+            price
+        )
+        VALUES (%s,%s,%s)
+        """, product)
+
+    conn.commit()
+
+# =========================
+# LOAD MENU
+# =========================
+
+def load_menu():
+
+    cur.execute("""
+    SELECT category, name, price
+    FROM products
+    ORDER BY id
+    """)
+
+    rows = cur.fetchall()
+
+    menu = {}
+
+    for row in rows:
+
+        category = row[0]
+        name = row[1]
+        price = row[2]
+
+        if category not in menu:
+            menu[category] = {}
+
+        menu[category][name] = price
+
+    return menu
+
+menu = load_menu()
 
 # =========================
 # MEMORY
@@ -112,6 +172,14 @@ waiting_door = {}
 
 user_data = {}
 
+broadcast_mode = {}
+
+adding_product = {}
+deleting_product = {}
+editing_price = {}
+
+cafe_open = True
+
 # =========================
 # MAIN KEYBOARD
 # =========================
@@ -120,10 +188,8 @@ def main_keyboard():
 
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
-    kb.add(KeyboardButton("🌭 Hot Dogs"))
-    kb.add(KeyboardButton("🌯 Shawarma"))
-    kb.add(KeyboardButton("🥟 Chebureki"))
-    kb.add(KeyboardButton("🥤 Drinks"))
+    for category in menu:
+        kb.add(KeyboardButton(category))
 
     kb.add(KeyboardButton("🛒 Cart"))
 
@@ -137,6 +203,14 @@ def main_keyboard():
 
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
+
+    if not cafe_open:
+
+        await message.answer(
+            "❌ Cafe is temporarily closed."
+        )
+
+        return
 
     user_cart[message.from_user.id] = []
 
@@ -198,7 +272,6 @@ async def add_to_cart(message: types.Message):
         if message.text in category:
 
             item_name = message.text
-
             price = category[item_name]
 
             if message.from_user.id not in user_cart:
@@ -441,44 +514,21 @@ async def door_handler(message: types.Message):
 
     text += f"\n💰 Total: {total} TL"
 
-    text += (
-        f"\n📞 Phone: "
-        f"{user_data[message.from_user.id]['phone']}"
-    )
+    text += f"\n📞 Phone: {user_data[message.from_user.id]['phone']}"
 
-    text += (
-        f"\n🏠 Address: "
-        f"{user_data[message.from_user.id]['address']}"
-    )
+    text += f"\n🏠 Address: {user_data[message.from_user.id]['address']}"
 
-    text += (
-        f"\n🏢 Complex code: "
-        f"{user_data[message.from_user.id]['complex']}"
-    )
+    text += f"\n🏢 Complex code: {user_data[message.from_user.id]['complex']}"
 
-    text += (
-        f"\n🚪 Door code: "
-        f"{user_data[message.from_user.id]['door']}"
-    )
+    text += f"\n🚪 Door code: {user_data[message.from_user.id]['door']}"
 
-    text += (
-        f"\n\n👤 Client: "
-        f"{message.from_user.full_name}"
-    )
+    text += f"\n\n👤 Client: {message.from_user.full_name}"
 
-    text += (
-        f"\n🆔 ID: "
-        f"{message.from_user.id}"
-    )
+    text += f"\n🆔 ID: {message.from_user.id}"
 
     if message.from_user.username:
 
-        text += (
-            f"\n🔗 Username: "
-            f"@{message.from_user.username}"
-        )
-
-    # SAVE DATABASE
+        text += f"\n🔗 Username: @{message.from_user.username}"
 
     cur.execute("""
     INSERT INTO orders (
@@ -507,25 +557,20 @@ async def door_handler(message: types.Message):
 
     conn.commit()
 
-    # SEND TO ADMIN
-
     await bot.send_message(
         ADMIN_ID,
         text
     )
 
-    # SUCCESS
-
     await message.answer(
-        "✅ Order sent successfully!\n\n"
-        "VAMO Cafe will contact you soon.",
+        "✅ Order sent successfully!\n\nVAMO Cafe will contact you soon.",
         reply_markup=main_keyboard()
     )
 
     user_cart[message.from_user.id] = []
 
 # =========================
-# ADMIN
+# BIG ADMIN PANEL
 # =========================
 
 @dp.message_handler(commands=["admin"])
@@ -536,99 +581,208 @@ async def admin_panel(message: types.Message):
 
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
-    kb.add(KeyboardButton("📦 Orders"))
-    kb.add(KeyboardButton("📊 Statistics"))
-    kb.add(KeyboardButton("⬅ Back"))
+    kb.add(
+        KeyboardButton("📦 Orders"),
+        KeyboardButton("📊 Statistics")
+    )
+
+    kb.add(
+        KeyboardButton("👥 Clients"),
+        KeyboardButton("🍔 Menu")
+    )
+
+    kb.add(
+        KeyboardButton("➕ Add Product"),
+        KeyboardButton("❌ Delete Product")
+    )
+
+    kb.add(
+        KeyboardButton("✏ Edit Price"),
+        KeyboardButton("💰 Income Today")
+    )
+
+    kb.add(
+        KeyboardButton("📈 Analytics"),
+        KeyboardButton("📢 Broadcast")
+    )
+
+    kb.add(
+        KeyboardButton("🟢 Cafe Status"),
+        KeyboardButton("⭐ Reviews")
+    )
+
+    kb.add(
+        KeyboardButton("🚫 Ban User")
+    )
+
+    kb.add(
+        KeyboardButton("⬅ Back")
+    )
 
     await message.answer(
-        "⚙ ADMIN PANEL",
+        "⚙ BIG ADMIN PANEL",
         reply_markup=kb
     )
 
 # =========================
-# ORDERS
+# ADD PRODUCT
 # =========================
 
 @dp.message_handler(lambda message:
-    message.text == "📦 Orders"
+    message.text == "➕ Add Product"
 )
-async def orders_handler(message: types.Message):
+async def add_product_start(message: types.Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    adding_product[message.from_user.id] = {}
+
+    await message.answer(
+        "📂 Enter category:"
+    )
+
+# =========================
+# ADD PRODUCT FLOW
+# =========================
+
+@dp.message_handler(lambda message:
+    message.from_user.id in adding_product
+)
+async def add_product_flow(message: types.Message):
+
+    data = adding_product[message.from_user.id]
+
+    if "category" not in data:
+
+        data["category"] = message.text
+
+        await message.answer(
+            "🍔 Enter product name:"
+        )
+
+        return
+
+    if "name" not in data:
+
+        data["name"] = message.text
+
+        await message.answer(
+            "💰 Enter product price:"
+        )
+
+        return
+
+    if "price" not in data:
+
+        try:
+            price = int(message.text)
+
+        except:
+
+            await message.answer(
+                "❌ Enter only number"
+            )
+
+            return
+
+        data["price"] = price
+
+        cur.execute("""
+        INSERT INTO products (
+            category,
+            name,
+            price
+        )
+        VALUES (%s,%s,%s)
+        """, (
+            data["category"],
+            data["name"],
+            data["price"]
+        ))
+
+        conn.commit()
+
+        global menu
+
+        menu = load_menu()
+
+        adding_product.pop(message.from_user.id)
+
+        await message.answer(
+            "✅ Product added"
+        )
+
+# =========================
+# DELETE PRODUCT
+# =========================
+
+@dp.message_handler(lambda message:
+    message.text == "❌ Delete Product"
+)
+async def delete_product_start(message: types.Message):
 
     if message.from_user.id != ADMIN_ID:
         return
 
     cur.execute("""
-    SELECT id, full_name, total, created_at
-    FROM orders
-    ORDER BY id DESC
-    LIMIT 10
+    SELECT id, name, price
+    FROM products
+    ORDER BY id
     """)
 
-    orders = cur.fetchall()
+    products = cur.fetchall()
 
-    if not orders:
+    text = "❌ PRODUCTS\n\n"
 
-        await message.answer(
-            "No orders yet."
-        )
-
-        return
-
-    text = "📦 LAST ORDERS\n\n"
-
-    for order in orders:
+    for product in products:
 
         text += (
-            f"#{order[0]} | "
-            f"{order[1]} | "
-            f"{order[2]} TL\n"
+            f"{product[0]}. "
+            f"{product[1]} — "
+            f"{product[2]} TL\n"
         )
 
-    await message.answer(text)
+    deleting_product[message.from_user.id] = True
+
+    await message.answer(
+        text + "\n\nSend product ID:"
+    )
 
 # =========================
-# STATS
+# DELETE FLOW
 # =========================
 
 @dp.message_handler(lambda message:
-    message.text == "📊 Statistics"
+    message.from_user.id in deleting_product
 )
-async def stats_handler(message: types.Message):
+async def delete_product_flow(message: types.Message):
 
-    if message.from_user.id != ADMIN_ID:
+    try:
+
+        product_id = int(message.text)
+
+    except:
+
+        await message.answer(
+            "❌ Invalid ID"
+        )
+
         return
 
-    cur.execute(
-        "SELECT COUNT(*) FROM orders"
-    )
+    cur.execute("""
+    DELETE FROM products
+    WHERE id=%s
+    """, (product_id,))
 
-    total_orders = cur.fetchone()[0]
+    conn.commit()
 
-    cur.execute(
-        "SELECT COALESCE(SUM(total),0) FROM orders"
-    )
+    global menu
 
-    total_income = cur.fetchone()[0]
+    menu = load_menu()
 
-    text = (
-        f"📊 Statistics\n\n"
-        f"📦 Orders: {total_orders}\n"
-        f"💰 Income: {total_income} TL"
-    )
+    deleting_product.pop(message.from_user.id)
 
-    await message.answer(text)
-
-# =========================
-# RUN
-# =========================
-
-if __name__ == "__main__":
-
-    threading.Thread(
-        target=run_web
-    ).start()
-
-    executor.start_polling(
-        dp,
-        skip_updates=True
+    await message.answer(
+        "✅ Product deleted"
     )
