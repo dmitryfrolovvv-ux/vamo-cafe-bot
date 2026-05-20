@@ -5,6 +5,9 @@
 import logging
 import psycopg2
 
+from flask import Flask
+from threading import Thread
+
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
@@ -14,6 +17,10 @@ from aiogram.types import (
     KeyboardButton
 )
 
+# =========================
+# CONFIG
+# =========================
+
 TOKEN = "8729557900:AAGQceOGd-V5erYJpSXV5M95wrFU_JeMd4Q"
 
 ADMIN_ID = 1472777680
@@ -22,16 +29,36 @@ DATABASE_URL = "postgresql://postgres.gtglvcebuvuampyhtaze:froLOV580530.@aws-1-a
 
 logging.basicConfig(level=logging.INFO)
 
+# =========================
+# BOT
+# =========================
+
 bot = Bot(token=TOKEN)
 
 storage = MemoryStorage()
 
 dp = Dispatcher(bot, storage=storage)
 
-conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+# =========================
+# FLASK
+# =========================
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "VAMO BOT WORKING"
+
+# =========================
+# DATABASE
+# =========================
+
+conn = psycopg2.connect(
+    DATABASE_URL,
+    sslmode="require"
+)
 
 cur = conn.cursor()
-
 
 # =========================
 # STATES
@@ -45,19 +72,9 @@ class Checkout(StatesGroup):
 
     comment = State()
 
-
 # =========================
-# DB
+# TABLES
 # =========================
-
-cur.execute("""
-CREATE TABLE IF NOT EXISTS products(
-    id SERIAL PRIMARY KEY,
-    category TEXT,
-    name TEXT,
-    price INTEGER
-)
-""")
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS cart(
@@ -78,7 +95,6 @@ CREATE TABLE IF NOT EXISTS orders(
 """)
 
 conn.commit()
-
 
 # =========================
 # PRODUCTS
@@ -113,9 +129,8 @@ products = {
     ]
 }
 
-
 # =========================
-# MAIN MENU
+# MENU
 # =========================
 
 def main_menu():
@@ -124,12 +139,15 @@ def main_menu():
 
     for category in products.keys():
 
-        kb.add(KeyboardButton(category))
+        kb.add(
+            KeyboardButton(category)
+        )
 
-    kb.add(KeyboardButton("🛒 Cart"))
+    kb.add(
+        KeyboardButton("🛒 Cart")
+    )
 
     return kb
-
 
 # =========================
 # START
@@ -143,9 +161,8 @@ async def start(message: types.Message):
         reply_markup=main_menu()
     )
 
-
 # =========================
-# CATEGORIES
+# CATEGORY
 # =========================
 
 @dp.message_handler(lambda m: m.text in products.keys())
@@ -167,19 +184,27 @@ async def category_handler(message: types.Message):
             )
         )
 
-    kb.add(KeyboardButton("⬅ Back"))
+    kb.add(
+        KeyboardButton("⬅ Back")
+    )
 
-    await message.answer(text, reply_markup=kb)
-
+    await message.answer(
+        text,
+        reply_markup=kb
+    )
 
 # =========================
-# ADD TO CART
+# UNIVERSAL
 # =========================
 
 @dp.message_handler()
 async def universal(message: types.Message):
 
     text = message.text
+
+    # =====================
+    # BACK
+    # =====================
 
     if text == "⬅ Back":
 
@@ -189,6 +214,10 @@ async def universal(message: types.Message):
         )
 
         return
+
+    # =====================
+    # CART
+    # =====================
 
     if text == "🛒 Cart":
 
@@ -204,7 +233,9 @@ async def universal(message: types.Message):
 
         if not items:
 
-            await message.answer("🛒 Cart is empty")
+            await message.answer(
+                "🛒 Cart is empty"
+            )
 
             return
 
@@ -222,15 +253,28 @@ async def universal(message: types.Message):
 
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
-        kb.add(KeyboardButton("✅ Checkout"))
+        kb.add(
+            KeyboardButton("✅ Checkout")
+        )
 
-        kb.add(KeyboardButton("❌ Clear cart"))
+        kb.add(
+            KeyboardButton("❌ Clear cart")
+        )
 
-        kb.add(KeyboardButton("⬅ Back"))
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
 
-        await message.answer(cart_text, reply_markup=kb)
+        await message.answer(
+            cart_text,
+            reply_markup=kb
+        )
 
         return
+
+    # =====================
+    # CLEAR CART
+    # =====================
 
     if text == "❌ Clear cart":
 
@@ -249,6 +293,10 @@ async def universal(message: types.Message):
         )
 
         return
+
+    # =====================
+    # CHECKOUT
+    # =====================
 
     if text == "✅ Checkout":
 
@@ -273,6 +321,10 @@ async def universal(message: types.Message):
         await Checkout.address.set()
 
         return
+
+    # =====================
+    # ADD PRODUCT
+    # =====================
 
     for category in products.values():
 
@@ -305,7 +357,6 @@ async def universal(message: types.Message):
 
                 return
 
-
 # =========================
 # LOCATION
 # =========================
@@ -325,15 +376,18 @@ async def checkout_location(
 
     address = f"https://maps.google.com/?q={lat},{lon}"
 
-    await state.update_data(address=address)
+    await state.update_data(
+        address=address
+    )
 
-    await message.answer("📞 Enter phone number")
+    await message.answer(
+        "📞 Enter phone number"
+    )
 
     await Checkout.phone.set()
 
-
 # =========================
-# SKIP LOCATION
+# SKIP
 # =========================
 
 @dp.message_handler(
@@ -345,12 +399,15 @@ async def checkout_skip(
     state: FSMContext
 ):
 
-    await state.update_data(address="Not specified")
+    await state.update_data(
+        address="Not specified"
+    )
 
-    await message.answer("📞 Enter phone number")
+    await message.answer(
+        "📞 Enter phone number"
+    )
 
     await Checkout.phone.set()
-
 
 # =========================
 # ADDRESS
@@ -366,10 +423,11 @@ async def checkout_address(
         address=message.text
     )
 
-    await message.answer("📞 Enter phone number")
+    await message.answer(
+        "📞 Enter phone number"
+    )
 
     await Checkout.phone.set()
-
 
 # =========================
 # PHONE
@@ -390,7 +448,6 @@ async def checkout_phone(
     )
 
     await Checkout.comment.set()
-
 
 # =========================
 # COMMENT
@@ -496,12 +553,26 @@ async def checkout_comment(
 
         await message.answer(str(e))
 
+# =========================
+# WEB
+# =========================
+
+def run_web():
+
+    app.run(
+        host="0.0.0.0",
+        port=10000
+    )
 
 # =========================
 # RUN
 # =========================
 
 if __name__ == "__main__":
+
+    Thread(
+        target=run_web
+    ).start()
 
     executor.start_polling(
         dp,
