@@ -1,4 +1,3 @@
-```python
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -356,4 +355,3 @@ def register_admin(dp, conn, cur):
             conn.rollback()
 
             await message.answer(str(e))
-```
