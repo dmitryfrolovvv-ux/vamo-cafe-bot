@@ -5,7 +5,7 @@ import asyncio
 import os
 from aiohttp import web
 
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = "8729557900:AAGQceOGd-V5erYJpSXV5M95wrFU_JeMd4Q"
 OWNER_ID = 1472777680
 
 bot = Bot(token=TOKEN)
