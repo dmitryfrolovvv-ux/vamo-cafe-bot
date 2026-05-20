@@ -52,7 +52,7 @@ conn = psycopg2.connect(
 cur = conn.cursor()
 
 # =========================
-# ORDERS TABLE
+# TABLES
 # =========================
 
 cur.execute("""
@@ -70,10 +70,6 @@ CREATE TABLE IF NOT EXISTS orders (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 """)
-
-# =========================
-# PRODUCTS TABLE
-# =========================
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS products (
@@ -172,13 +168,8 @@ waiting_door = {}
 
 user_data = {}
 
-broadcast_mode = {}
-
 adding_product = {}
 deleting_product = {}
-editing_price = {}
-
-cafe_open = True
 
 # =========================
 # MAIN KEYBOARD
@@ -192,7 +183,6 @@ def main_keyboard():
         kb.add(KeyboardButton(category))
 
     kb.add(KeyboardButton("🛒 Cart"))
-
     kb.add(KeyboardButton("🌐 Change Language"))
 
     return kb
@@ -203,14 +193,6 @@ def main_keyboard():
 
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
-
-    if not cafe_open:
-
-        await message.answer(
-            "❌ Cafe is temporarily closed."
-        )
-
-        return
 
     user_cart[message.from_user.id] = []
 
@@ -254,7 +236,7 @@ async def category_handler(message: types.Message):
 async def back_handler(message: types.Message):
 
     await message.answer(
-        "⬅ Returned to main menu",
+        "⬅ Back to main menu",
         reply_markup=main_keyboard()
     )
 
@@ -299,7 +281,7 @@ async def cart_handler(message: types.Message):
     if not cart:
 
         await message.answer(
-            "🛒 Your cart is empty!"
+            "🛒 Cart is empty"
         )
 
         return
@@ -335,13 +317,8 @@ async def checkout(message: types.Message):
 
     waiting_phone[message.from_user.id] = True
 
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    kb.add(KeyboardButton("⬅ Back"))
-
     await message.answer(
-        "📞 Send your phone number:\n\nExample:\n+905551112233",
-        reply_markup=kb
+        "📞 Send phone number"
     )
 
 # =========================
@@ -373,7 +350,7 @@ async def phone_handler(message: types.Message):
     kb.add(KeyboardButton("⏭ Skip"))
 
     await message.answer(
-        "🏠 Send address or location:",
+        "🏠 Send address/location",
         reply_markup=kb
     )
 
@@ -403,7 +380,7 @@ async def location_handler(message: types.Message):
     kb.add(KeyboardButton("⏭ Skip"))
 
     await message.answer(
-        "🏢 Enter complex/building code:\n(optional)",
+        "🏢 Enter complex code",
         reply_markup=kb
     )
 
@@ -437,7 +414,7 @@ async def address_handler(message: types.Message):
     kb.add(KeyboardButton("⏭ Skip"))
 
     await message.answer(
-        "🏢 Enter complex/building code:\n(optional)",
+        "🏢 Enter complex code",
         reply_markup=kb
     )
 
@@ -471,7 +448,7 @@ async def complex_handler(message: types.Message):
     kb.add(KeyboardButton("⏭ Skip"))
 
     await message.answer(
-        "🚪 Enter door code:\n(optional)",
+        "🚪 Enter door code",
         reply_markup=kb
     )
 
@@ -570,7 +547,7 @@ async def door_handler(message: types.Message):
     user_cart[message.from_user.id] = []
 
 # =========================
-# BIG ADMIN PANEL
+# ADMIN PANEL
 # =========================
 
 @dp.message_handler(commands=["admin"])
@@ -587,32 +564,8 @@ async def admin_panel(message: types.Message):
     )
 
     kb.add(
-        KeyboardButton("👥 Clients"),
-        KeyboardButton("🍔 Menu")
-    )
-
-    kb.add(
         KeyboardButton("➕ Add Product"),
         KeyboardButton("❌ Delete Product")
-    )
-
-    kb.add(
-        KeyboardButton("✏ Edit Price"),
-        KeyboardButton("💰 Income Today")
-    )
-
-    kb.add(
-        KeyboardButton("📈 Analytics"),
-        KeyboardButton("📢 Broadcast")
-    )
-
-    kb.add(
-        KeyboardButton("🟢 Cafe Status"),
-        KeyboardButton("⭐ Reviews")
-    )
-
-    kb.add(
-        KeyboardButton("🚫 Ban User")
     )
 
     kb.add(
@@ -620,9 +573,77 @@ async def admin_panel(message: types.Message):
     )
 
     await message.answer(
-        "⚙ BIG ADMIN PANEL",
+        "⚙ ADMIN PANEL",
         reply_markup=kb
     )
+
+# =========================
+# ORDERS
+# =========================
+
+@dp.message_handler(lambda message:
+    message.text == "📦 Orders"
+)
+async def admin_orders(message: types.Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    cur.execute("""
+    SELECT id, full_name, total
+    FROM orders
+    ORDER BY id DESC
+    LIMIT 10
+    """)
+
+    orders = cur.fetchall()
+
+    if not orders:
+
+        await message.answer(
+            "❌ No orders"
+        )
+
+        return
+
+    text = "📦 LAST ORDERS\n\n"
+
+    for order in orders:
+
+        text += (
+            f"#{order[0]} | "
+            f"{order[1]} | "
+            f"{order[2]} TL\n"
+        )
+
+    await message.answer(text)
+
+# =========================
+# STATISTICS
+# =========================
+
+@dp.message_handler(lambda message:
+    message.text == "📊 Statistics"
+)
+async def statistics(message: types.Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    cur.execute("""
+    SELECT COUNT(*), COALESCE(SUM(total),0)
+    FROM orders
+    """)
+
+    stats = cur.fetchone()
+
+    text = (
+        "📊 Statistics\n\n"
+        f"📦 Orders: {stats[0]}\n"
+        f"💰 Income: {stats[1]} TL"
+    )
+
+    await message.answer(text)
 
 # =========================
 # ADD PRODUCT
@@ -639,7 +660,7 @@ async def add_product_start(message: types.Message):
     adding_product[message.from_user.id] = {}
 
     await message.answer(
-        "📂 Enter category:"
+        "📂 Enter category"
     )
 
 # =========================
@@ -658,7 +679,7 @@ async def add_product_flow(message: types.Message):
         data["category"] = message.text
 
         await message.answer(
-            "🍔 Enter product name:"
+            "🍔 Enter product name"
         )
 
         return
@@ -668,7 +689,7 @@ async def add_product_flow(message: types.Message):
         data["name"] = message.text
 
         await message.answer(
-            "💰 Enter product price:"
+            "💰 Enter price"
         )
 
         return
@@ -676,12 +697,13 @@ async def add_product_flow(message: types.Message):
     if "price" not in data:
 
         try:
+
             price = int(message.text)
 
         except:
 
             await message.answer(
-                "❌ Enter only number"
+                "❌ Number only"
             )
 
             return
@@ -746,7 +768,7 @@ async def delete_product_start(message: types.Message):
     deleting_product[message.from_user.id] = True
 
     await message.answer(
-        text + "\n\nSend product ID:"
+        text + "\n\nSend product ID"
     )
 
 # =========================
@@ -785,4 +807,19 @@ async def delete_product_flow(message: types.Message):
 
     await message.answer(
         "✅ Product deleted"
+    )
+
+# =========================
+# RUN
+# =========================
+
+if __name__ == "__main__":
+
+    threading.Thread(
+        target=run_web
+    ).start()
+
+    executor.start_polling(
+        dp,
+        skip_updates=True
     )
