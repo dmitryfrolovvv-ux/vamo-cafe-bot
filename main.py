@@ -9,6 +9,7 @@ from flask import Flask
 from threading import Thread
 
 from aiogram import Bot, Dispatcher, executor, types
+from admin import register_admin
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -59,6 +60,7 @@ conn = psycopg2.connect(
 )
 
 cur = conn.cursor()
+register_admin(dp, conn, cur)
 
 # =========================
 # STATES
