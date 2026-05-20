@@ -359,28 +359,3 @@ if __name__ == '__main__':
         dp,
         skip_updates=True
     )
-```
-
-# requirements.txt
-
-```txt
-aiogram==2.25.1
-Flask==3.0.3
-psycopg2-binary==2.9.9
-```
-
-# Dockerfile
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-CMD ["python", "main.py"]
-```
