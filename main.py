@@ -1,19 +1,16 @@
 # =========================================
-# VAMO CAFE BOT
-# FULL MAIN.PY
+# VAMO CAFE BOT — FULL WORKING MAIN.PY
 # =========================================
 
 import logging
-import asyncio
-import os
+from threading import Thread
+
+from flask import Flask
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 import psycopg2
-
-from flask import Flask
-from threading import Thread
 
 # =========================================
 # CONFIG
@@ -21,12 +18,18 @@ from threading import Thread
 
 TOKEN = "8729557900:AAGQceOGd-V5erYJpSXV5M95wrFU_JeMd4Q"
 
-ADMIN_ID = 5199302693
+ADMIN_ID = 1472777680
 
 DATABASE_URL = "postgresql://postgres.gtglvcebuvuampyhtaze:froLOV580530.@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
 # =========================================
-# DB CONNECT
+# LOGGING
+# =========================================
+
+logging.basicConfig(level=logging.INFO)
+
+# =========================================
+# DB
 # =========================================
 
 conn = psycopg2.connect(
@@ -46,7 +49,7 @@ CREATE TABLE IF NOT EXISTS orders (
     user_id BIGINT,
     username TEXT,
     full_name TEXT,
-    product_name TEXT,
+    products TEXT,
     total INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
@@ -68,17 +71,18 @@ conn.commit()
 # =========================================
 
 cur.execute("SELECT COUNT(*) FROM products")
+
 count = cur.fetchone()[0]
 
 if count == 0:
 
-    products = [
+    demo_products = [
 
         ("🌭 Hot Dogs", "Classic Hot Dog", 150),
         ("🌭 Hot Dogs", "Cheese Hot Dog", 180),
         ("🌭 Hot Dogs", "Double Hot Dog", 220),
 
-        ("🌯 Shawarma", "Chicken Shawarma", 210),
+        ("🌯 Shawarma", "Chicken Shawarma", 200),
         ("🌯 Shawarma", "Big Shawarma", 260),
 
         ("🥤 Drinks", "Cola", 60),
@@ -86,7 +90,7 @@ if count == 0:
 
     ]
 
-    for p in products:
+    for p in demo_products:
 
         cur.execute("""
         INSERT INTO products(category,name,price)
@@ -99,8 +103,6 @@ if count == 0:
 # BOT
 # =========================================
 
-logging.basicConfig(level=logging.INFO)
-
 bot = Bot(token=TOKEN)
 
 dp = Dispatcher(bot)
@@ -109,14 +111,14 @@ dp = Dispatcher(bot)
 # FLASK
 # =========================================
 
-app = Flask('')
+app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "VAMO BOT WORKING"
+    return "BOT WORKING"
 
 def run():
-    app.run(host='0.0.0.0', port=10000)
+    app.run(host="0.0.0.0", port=10000)
 
 def keep_alive():
     t = Thread(target=run)
@@ -146,9 +148,9 @@ def main_menu():
 
     categories = cur.fetchall()
 
-    for c in categories:
+    for cat in categories:
 
-        kb.add(KeyboardButton(c[0]))
+        kb.add(KeyboardButton(cat[0]))
 
     kb.add(KeyboardButton("🛒 Cart"))
 
@@ -191,7 +193,7 @@ async def admin(message: types.Message):
         return
 
     await message.answer(
-        "⚙ ADMIN PANEL",
+        "⚙️ ADMIN PANEL",
         reply_markup=admin_menu()
     )
 
@@ -217,6 +219,7 @@ async def orders(message: types.Message):
     if not rows:
 
         await message.answer("No orders")
+
         return
 
     text = "📦 LAST ORDERS\n\n"
@@ -268,15 +271,16 @@ async def add_product(message: types.Message):
     cur.execute("""
     SELECT DISTINCT category
     FROM products
-    ORDER BY category
     """)
 
     cats = cur.fetchall()
 
-    text = "📂 Choose category:\n\n"
+    text = "📂 Existing categories:\n\n"
 
     for c in cats:
         text += f"{c[0]}\n"
+
+    text += "\nSend category name"
 
     await message.answer(text)
 
@@ -299,12 +303,12 @@ async def delete_category(message: types.Message):
     FROM products
     """)
 
-    cats = cur.fetchall()
+    rows = cur.fetchall()
 
-    text = "❌ Send category name to delete:\n\n"
+    text = "❌ Send category to delete:\n\n"
 
-    for c in cats:
-        text += f"{c[0]}\n"
+    for r in rows:
+        text += f"{r[0]}\n"
 
     await message.answer(text)
 
@@ -326,7 +330,8 @@ async def cart(message: types.Message):
     if not cart_items:
 
         await message.answer(
-            "🛒 Cart is empty"
+            "🛒 Cart is empty",
+            reply_markup=main_menu()
         )
 
         return
@@ -340,6 +345,7 @@ async def cart(message: types.Message):
         text += f"• {item}\n"
 
         try:
+
             price = int(
                 item.split("—")[1]
                 .replace("TL", "")
@@ -364,7 +370,7 @@ async def cart(message: types.Message):
 # CHECKOUT
 # =========================================
 
-@dp.message_handler(lambda m: m.text == "✅ Checkout")
+@dp.message_handler(lambda m: "Checkout" in m.text)
 async def checkout(message: types.Message):
 
     user_id = message.from_user.id
@@ -400,14 +406,14 @@ async def checkout(message: types.Message):
     products_text = "\n".join(cart_items)
 
     cur.execute("""
-    INSERT INTO orders (
+    INSERT INTO orders(
         user_id,
         username,
         full_name,
-        product_name,
+        products,
         total
     )
-    VALUES (%s,%s,%s,%s,%s)
+    VALUES(%s,%s,%s,%s,%s)
     """, (
         message.from_user.id,
         message.from_user.username,
@@ -417,6 +423,20 @@ async def checkout(message: types.Message):
     ))
 
     conn.commit()
+
+    await bot.send_message(
+        ADMIN_ID,
+        f"""
+🔥 NEW ORDER
+
+👤 Client: {message.from_user.full_name}
+🆔 ID: {message.from_user.id}
+📦 Products:
+{products_text}
+
+💰 Total: {total} TL
+"""
+    )
 
     user_carts[user_id] = []
 
@@ -434,21 +454,6 @@ VAMO Cafe will contact you soon.
         reply_markup=main_menu()
     )
 
-    await bot.send_message(
-        ADMIN_ID,
-        f"""
-🔥 NEW ORDER
-
-👤 Client: {message.from_user.full_name}
-🆔 ID: {message.from_user.id}
-
-📦 Order:
-{products_text}
-
-💰 Total: {total} TL
-"""
-    )
-
 # =========================================
 # UNIVERSAL
 # =========================================
@@ -458,11 +463,13 @@ async def universal(message: types.Message):
 
     user_id = message.from_user.id
 
-    text = message.text
+    text = message.text.strip()
 
-    # =========================
+    print("MESSAGE:", text)
+
+    # =====================================
     # BACK
-    # =========================
+    # =====================================
 
     if text == "⬅ Back":
 
@@ -473,15 +480,15 @@ async def universal(message: types.Message):
 
         return
 
-    # =========================
+    # =====================================
     # ADMIN STATES
-    # =========================
+    # =====================================
 
     if user_id in user_states:
 
         state = user_states[user_id]
 
-        # ADD PRODUCT
+        # CATEGORY
 
         if state["step"] == "category":
 
@@ -493,25 +500,29 @@ async def universal(message: types.Message):
 
             return
 
+        # NAME
+
         elif state["step"] == "name":
 
             state["name"] = text
 
             state["step"] = "price"
 
-            await message.answer("💰 Enter price")
+            await message.answer("💰 Enter product price")
 
             return
+
+        # PRICE
 
         elif state["step"] == "price":
 
             try:
-
                 price = int(text)
 
             except:
 
                 await message.answer("Enter number")
+
                 return
 
             cur.execute("""
@@ -554,9 +565,9 @@ async def universal(message: types.Message):
 
             return
 
-    # =========================
+    # =====================================
     # CATEGORY CLICK
-    # =========================
+    # =====================================
 
     cur.execute("""
     SELECT name, price
@@ -570,19 +581,17 @@ async def universal(message: types.Message):
 
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
-        for row in rows:
-
-            product_text = f"{row[0]} — {row[1]} TL"
-
-            kb.add(KeyboardButton(product_text))
-
-        kb.add(KeyboardButton("⬅ Back"))
-
         menu_text = f"{text}\n\n"
 
         for row in rows:
 
-            menu_text += f"• {row[0]} — {row[1]} TL\n"
+            btn = f"{row[0]} — {row[1]} TL"
+
+            kb.add(KeyboardButton(btn))
+
+            menu_text += f"• {btn}\n"
+
+        kb.add(KeyboardButton("⬅ Back"))
 
         await message.answer(
             menu_text,
@@ -591,18 +600,18 @@ async def universal(message: types.Message):
 
         return
 
-    # =========================
+    # =====================================
     # PRODUCT CLICK
-    # =========================
+    # =====================================
 
     cur.execute("""
     SELECT name, price
     FROM products
     """)
 
-    all_products = cur.fetchall()
+    products = cur.fetchall()
 
-    for product in all_products:
+    for product in products:
 
         btn = f"{product[0]} — {product[1]} TL"
 
@@ -629,16 +638,11 @@ async def universal(message: types.Message):
 # RUN
 # =========================================
 
-async def on_startup(dp):
-
-    print("BOT STARTED")
-
 if __name__ == "__main__":
 
     keep_alive()
 
     executor.start_polling(
         dp,
-        skip_updates=True,
-        on_startup=on_startup
+        skip_updates=True
     )
