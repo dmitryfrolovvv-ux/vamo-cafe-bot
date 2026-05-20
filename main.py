@@ -24,7 +24,7 @@ TOKEN = "8729557900:AAGQceOGd-V5erYJpSXV5M95wrFU_JeMd4Q"
 
 ADMIN_ID = 1472777680
 
-DATABASE_URL = "postgresql://postgres:froLOV580530.@host:5432/postgres"
+DATABASE_URL = "postgresql://postgres.gtglvcebuvuampyhtaze:froLOV580530.@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
 logging.basicConfig(level=logging.INFO)
 
