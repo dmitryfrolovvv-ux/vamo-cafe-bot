@@ -1,29 +1,25 @@
 import os
-import asyncio
 import logging
+import threading
+import psycopg2
+
 from flask import Flask
-from threading import Thread
-from aiogram import Bot, Dispatcher, types
+
+from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import (
     ReplyKeyboardMarkup,
-    KeyboardButton,
-    ReplyKeyboardRemove,
+    KeyboardButton
 )
-from aiogram.utils import executor
-import psycopg2
-from psycopg2.extras import RealDictCursor
 
 # =========================
 # CONFIG
 # =========================
 
 TOKEN = "8729557900:AAGQceOGd-V5erYJpSXV5M95wrFU_JeMd4Q"
+
 ADMIN_ID = 1472777680
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:froLOV580530@db.gtglvcebuvuampyhtaze.supabase.co:5432/postgres"
-)
+DATABASE_URL = "postgresql://postgres.gtglvcebuvuampyhtaze:froLOV580530.@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,14 +27,14 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 
 # =========================
-# FLASK KEEP ALIVE
+# FLASK
 # =========================
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "VAMO Cafe Bot is running!"
+    return "VAMO BOT WORKING"
 
 def run_web():
     port = int(os.environ.get("PORT", 10000))
@@ -48,7 +44,11 @@ def run_web():
 # DATABASE
 # =========================
 
-conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+conn = psycopg2.connect(
+    DATABASE_URL,
+    sslmode="require"
+)
+
 cur = conn.cursor()
 
 cur.execute("""
@@ -74,56 +74,61 @@ conn.commit()
 # =========================
 
 menu = {
+
     "🌭 Hot Dogs": {
         "Classic Hot Dog": 150,
         "Cheese Hot Dog": 180,
-        "Double Hot Dog": 220,
+        "Double Hot Dog": 220
     },
+
     "🌯 Shawarma": {
         "Chicken Shawarma": 200,
-        "Big Shawarma": 260,
+        "Big Shawarma": 260
     },
+
     "🥟 Chebureki": {
         "Classic Chebureki": 140,
         "Cheese Chebureki": 160,
-        "Meat Chebureki": 190,
+        "Meat Chebureki": 190
     },
+
     "🥤 Drinks": {
         "Cola": 60,
         "Ayran": 50,
-        "Water": 30,
+        "Water": 30
     }
 }
 
 # =========================
-# USER DATA
+# MEMORY
 # =========================
 
 user_cart = {}
+
 waiting_phone = {}
 waiting_address = {}
 waiting_complex = {}
 waiting_door = {}
 
+user_data = {}
+
 # =========================
-# KEYBOARDS
+# MAIN KEYBOARD
 # =========================
 
 def main_keyboard():
+
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
-    for category in menu.keys():
-        kb.add(KeyboardButton(category))
+    kb.add(KeyboardButton("🌭 Hot Dogs"))
+    kb.add(KeyboardButton("🌯 Shawarma"))
+    kb.add(KeyboardButton("🥟 Chebureki"))
+    kb.add(KeyboardButton("🥤 Drinks"))
 
     kb.add(KeyboardButton("🛒 Cart"))
+
     kb.add(KeyboardButton("🌐 Change Language"))
 
-    return kb
-
-def cart_keyboard():
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(KeyboardButton("✅ Checkout"))
-    kb.add(KeyboardButton("⬅ Back"))
     return kb
 
 # =========================
@@ -132,106 +137,11 @@ def cart_keyboard():
 
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
+
     user_cart[message.from_user.id] = []
 
-    text = (
-        "🍔 Welcome to VAMO Cafe!\n\n"
-        "Choose category:"
-    )
-
-    await message.answer(text, reply_markup=main_keyboard())
-
-# =========================
-# ADMIN PANEL
-# =========================
-
-@dp.message_handler(commands=["admin"])
-async def admin_panel(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("📦 Orders")
-    kb.add("📊 Statistics")
-    kb.add("⬅ Back")
-
-    await message.answer("⚙ Admin Panel", reply_markup=kb)
-
-# =========================
-# ORDERS
-# =========================
-
-@dp.message_handler(lambda m: m.text == "📦 Orders")
-async def show_orders(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    cur.execute("""
-    SELECT * FROM orders
-    ORDER BY id DESC
-    LIMIT 10
-    """)
-
-    orders = cur.fetchall()
-
-    if not orders:
-        await message.answer("No orders yet.")
-        return
-
-    for order in orders:
-        text = (
-            f"📦 ORDER #{order[0]}\n\n"
-            f"👤 {order[3]}\n"
-            f"📱 {order[6]}\n"
-            f"🏠 {order[7]}\n\n"
-            f"{order[4]}\n\n"
-            f"💰 {order[5]} TL"
-        )
-
-        await message.answer(text)
-
-# =========================
-# STATISTICS
-# =========================
-
-@dp.message_handler(lambda m: m.text == "📊 Statistics")
-async def statistics(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        return
-
-    cur.execute("SELECT COUNT(*) FROM orders")
-    total_orders = cur.fetchone()[0]
-
-    cur.execute("SELECT COALESCE(SUM(total),0) FROM orders")
-    total_money = cur.fetchone()[0]
-
-    text = (
-        f"📊 Statistics\n\n"
-        f"📦 Orders: {total_orders}\n"
-        f"💰 Revenue: {total_money} TL"
-    )
-
-    await message.answer(text)
-
-# =========================
-# BACK
-# =========================
-
-@dp.message_handler(lambda m: m.text == "⬅ Back")
-async def back(message: types.Message):
     await message.answer(
-        "Returned to main menu",
-        reply_markup=main_keyboard()
-    )
-
-# =========================
-# CHANGE LANGUAGE
-# =========================
-
-@dp.message_handler(lambda m: m.text == "🌐 Change Language")
-async def change_language(message: types.Message):
-    await message.answer(
-        "🌍 Language changed!\n\nChoose category:",
+        "🍴 Welcome to VAMO Cafe!\n\nChoose category:",
         reply_markup=main_keyboard()
     )
 
@@ -239,235 +149,486 @@ async def change_language(message: types.Message):
 # CATEGORY
 # =========================
 
-@dp.message_handler(lambda m: m.text in menu)
+@dp.message_handler(lambda message: message.text in menu)
 async def category_handler(message: types.Message):
+
     category = message.text
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
     text = f"{category} Menu\n\n"
 
     for item, price in menu[category].items():
+
         text += f"• {item} — {price} TL\n"
 
-    text += "\nTap button again to add item."
+        kb.add(KeyboardButton(item))
+
+    kb.add(KeyboardButton("🛒 Cart"))
+    kb.add(KeyboardButton("⬅ Back"))
+
+    await message.answer(
+        text,
+        reply_markup=kb
+    )
+
+# =========================
+# BACK
+# =========================
+
+@dp.message_handler(lambda message: message.text == "⬅ Back")
+async def back_handler(message: types.Message):
+
+    await message.answer(
+        "⬅ Returned to main menu",
+        reply_markup=main_keyboard()
+    )
+
+# =========================
+# ADD TO CART
+# =========================
+
+@dp.message_handler(lambda message: any(
+    message.text in items for items in menu.values()
+))
+async def add_to_cart(message: types.Message):
+
+    for category in menu.values():
+
+        if message.text in category:
+
+            item_name = message.text
+
+            price = category[item_name]
+
+            if message.from_user.id not in user_cart:
+                user_cart[message.from_user.id] = []
+
+            user_cart[message.from_user.id].append(
+                (item_name, price)
+            )
+
+            await message.answer(
+                f"✅ Added:\n{item_name} — {price} TL"
+            )
+
+            return
+
+# =========================
+# CART
+# =========================
+
+@dp.message_handler(lambda message: message.text == "🛒 Cart")
+async def cart_handler(message: types.Message):
+
+    cart = user_cart.get(message.from_user.id, [])
+
+    if not cart:
+
+        await message.answer(
+            "🛒 Your cart is empty!"
+        )
+
+        return
+
+    text = "🛒 Your Cart\n\n"
+
+    total = 0
+
+    for item, price in cart:
+
+        text += f"• {item} — {price} TL\n"
+
+        total += price
+
+    text += f"\n💰 Total: {total} TL"
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    kb.add(KeyboardButton("✅ Checkout"))
+    kb.add(KeyboardButton("⬅ Back"))
+
+    await message.answer(
+        text,
+        reply_markup=kb
+    )
+
+# =========================
+# CHECKOUT
+# =========================
+
+@dp.message_handler(lambda message: message.text == "✅ Checkout")
+async def checkout(message: types.Message):
+
+    waiting_phone[message.from_user.id] = True
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    kb.add(KeyboardButton("⬅ Back"))
+
+    await message.answer(
+        "📞 Send your phone number:\n\nExample:\n+905551112233",
+        reply_markup=kb
+    )
+
+# =========================
+# PHONE
+# =========================
+
+@dp.message_handler(lambda message:
+    message.from_user.id in waiting_phone
+)
+async def phone_handler(message: types.Message):
+
+    user_data[message.from_user.id] = {
+        "phone": message.text
+    }
+
+    waiting_phone.pop(message.from_user.id)
+
+    waiting_address[message.from_user.id] = True
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    kb.add(
+        KeyboardButton(
+            "📍 Send Location",
+            request_location=True
+        )
+    )
+
+    kb.add(KeyboardButton("⏭ Skip"))
+
+    await message.answer(
+        "🏠 Send address or location:",
+        reply_markup=kb
+    )
+
+# =========================
+# LOCATION
+# =========================
+
+@dp.message_handler(content_types=["location"])
+async def location_handler(message: types.Message):
+
+    if message.from_user.id not in waiting_address:
+        return
+
+    lat = message.location.latitude
+    lon = message.location.longitude
+
+    user_data[message.from_user.id]["address"] = (
+        f"https://maps.google.com/?q={lat},{lon}"
+    )
+
+    waiting_address.pop(message.from_user.id)
+
+    waiting_complex[message.from_user.id] = True
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    kb.add(KeyboardButton("⏭ Skip"))
+
+    await message.answer(
+        "🏢 Enter complex/building code:\n(optional)",
+        reply_markup=kb
+    )
+
+# =========================
+# ADDRESS
+# =========================
+
+@dp.message_handler(lambda message:
+    message.from_user.id in waiting_address
+)
+async def address_handler(message: types.Message):
+
+    if message.text == "⏭ Skip":
+
+        user_data[message.from_user.id]["address"] = (
+            "Not provided"
+        )
+
+    else:
+
+        user_data[message.from_user.id]["address"] = (
+            message.text
+        )
+
+    waiting_address.pop(message.from_user.id)
+
+    waiting_complex[message.from_user.id] = True
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    kb.add(KeyboardButton("⏭ Skip"))
+
+    await message.answer(
+        "🏢 Enter complex/building code:\n(optional)",
+        reply_markup=kb
+    )
+
+# =========================
+# COMPLEX CODE
+# =========================
+
+@dp.message_handler(lambda message:
+    message.from_user.id in waiting_complex
+)
+async def complex_handler(message: types.Message):
+
+    if message.text == "⏭ Skip":
+
+        user_data[message.from_user.id]["complex"] = (
+            "Not provided"
+        )
+
+    else:
+
+        user_data[message.from_user.id]["complex"] = (
+            message.text
+        )
+
+    waiting_complex.pop(message.from_user.id)
+
+    waiting_door[message.from_user.id] = True
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    kb.add(KeyboardButton("⏭ Skip"))
+
+    await message.answer(
+        "🚪 Enter door code:\n(optional)",
+        reply_markup=kb
+    )
+
+# =========================
+# DOOR CODE
+# =========================
+
+@dp.message_handler(lambda message:
+    message.from_user.id in waiting_door
+)
+async def door_handler(message: types.Message):
+
+    if message.text == "⏭ Skip":
+
+        user_data[message.from_user.id]["door"] = (
+            "Not provided"
+        )
+
+    else:
+
+        user_data[message.from_user.id]["door"] = (
+            message.text
+        )
+
+    waiting_door.pop(message.from_user.id)
+
+    cart = user_cart.get(message.from_user.id, [])
+
+    total = sum(price for _, price in cart)
+
+    text = "📦 NEW ORDER\n\n"
+
+    items_text = ""
+
+    for item, price in cart:
+
+        text += f"• {item} — {price} TL\n"
+
+        items_text += f"{item} ({price} TL), "
+
+    text += f"\n💰 Total: {total} TL"
+
+    text += (
+        f"\n📞 Phone: "
+        f"{user_data[message.from_user.id]['phone']}"
+    )
+
+    text += (
+        f"\n🏠 Address: "
+        f"{user_data[message.from_user.id]['address']}"
+    )
+
+    text += (
+        f"\n🏢 Complex code: "
+        f"{user_data[message.from_user.id]['complex']}"
+    )
+
+    text += (
+        f"\n🚪 Door code: "
+        f"{user_data[message.from_user.id]['door']}"
+    )
+
+    text += (
+        f"\n\n👤 Client: "
+        f"{message.from_user.full_name}"
+    )
+
+    text += (
+        f"\n🆔 ID: "
+        f"{message.from_user.id}"
+    )
+
+    if message.from_user.username:
+
+        text += (
+            f"\n🔗 Username: "
+            f"@{message.from_user.username}"
+        )
+
+    # SAVE DATABASE
+
+    cur.execute("""
+    INSERT INTO orders (
+        user_id,
+        username,
+        full_name,
+        items,
+        total,
+        phone,
+        address,
+        complex_code,
+        door_code
+    )
+    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, (
+        message.from_user.id,
+        message.from_user.username,
+        message.from_user.full_name,
+        items_text,
+        total,
+        user_data[message.from_user.id]["phone"],
+        user_data[message.from_user.id]["address"],
+        user_data[message.from_user.id]["complex"],
+        user_data[message.from_user.id]["door"]
+    ))
+
+    conn.commit()
+
+    # SEND TO ADMIN
+
+    await bot.send_message(
+        ADMIN_ID,
+        text
+    )
+
+    # SUCCESS
+
+    await message.answer(
+        "✅ Order sent successfully!\n\n"
+        "VAMO Cafe will contact you soon.",
+        reply_markup=main_keyboard()
+    )
+
+    user_cart[message.from_user.id] = []
+
+# =========================
+# ADMIN
+# =========================
+
+@dp.message_handler(commands=["admin"])
+async def admin_panel(message: types.Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    kb.add(KeyboardButton("📦 Orders"))
+    kb.add(KeyboardButton("📊 Statistics"))
+    kb.add(KeyboardButton("⬅ Back"))
+
+    await message.answer(
+        "⚙ ADMIN PANEL",
+        reply_markup=kb
+    )
+
+# =========================
+# ORDERS
+# =========================
+
+@dp.message_handler(lambda message:
+    message.text == "📦 Orders"
+)
+async def orders_handler(message: types.Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    cur.execute("""
+    SELECT id, full_name, total, created_at
+    FROM orders
+    ORDER BY id DESC
+    LIMIT 10
+    """)
+
+    orders = cur.fetchall()
+
+    if not orders:
+
+        await message.answer(
+            "No orders yet."
+        )
+
+        return
+
+    text = "📦 LAST ORDERS\n\n"
+
+    for order in orders:
+
+        text += (
+            f"#{order[0]} | "
+            f"{order[1]} | "
+            f"{order[2]} TL\n"
+        )
 
     await message.answer(text)
 
 # =========================
-# ADD ITEM
+# STATS
 # =========================
 
-@dp.message_handler()
-async def all_messages(message: types.Message):
-    user_id = message.from_user.id
-    text = message.text
+@dp.message_handler(lambda message:
+    message.text == "📊 Statistics"
+)
+async def stats_handler(message: types.Message):
 
-    # ADD ITEM
-    for category, items in menu.items():
-        if text in items:
-            if user_id not in user_cart:
-                user_cart[user_id] = []
-
-            user_cart[user_id].append((text, items[text]))
-
-            await message.answer(
-                f"✅ Added: {text}",
-                reply_markup=main_keyboard()
-            )
-            return
-
-    # CART
-    if text == "🛒 Cart":
-        cart = user_cart.get(user_id, [])
-
-        if not cart:
-            await message.answer("🛒 Your cart is empty!")
-            return
-
-        msg = "🛒 Your Cart\n\n"
-
-        total = 0
-
-        for item, price in cart:
-            msg += f"• {item} — {price} TL\n"
-            total += price
-
-        msg += f"\n💰 Total: {total} TL"
-
-        await message.answer(msg, reply_markup=cart_keyboard())
+    if message.from_user.id != ADMIN_ID:
         return
 
-    # CHECKOUT
-    if text == "✅ Checkout":
-        waiting_phone[user_id] = True
+    cur.execute(
+        "SELECT COUNT(*) FROM orders"
+    )
 
-        kb = ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(KeyboardButton("📱 Send phone number", request_contact=True))
+    total_orders = cur.fetchone()[0]
 
-        await message.answer(
-            "📞 Send your phone number:\n\nExample:\n+905551112233",
-            reply_markup=kb
-        )
-        return
+    cur.execute(
+        "SELECT COALESCE(SUM(total),0) FROM orders"
+    )
 
-    # PHONE
-    if user_id in waiting_phone:
-        phone = text
+    total_income = cur.fetchone()[0]
 
-        if message.contact:
-            phone = message.contact.phone_number
+    text = (
+        f"📊 Statistics\n\n"
+        f"📦 Orders: {total_orders}\n"
+        f"💰 Income: {total_income} TL"
+    )
 
-        waiting_phone.pop(user_id)
-
-        waiting_address[user_id] = phone
-
-        kb = ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(KeyboardButton("📍 Send location", request_location=True))
-        kb.add(KeyboardButton("⏭ Skip"))
-
-        await message.answer(
-            "📍 Send your address or location:",
-            reply_markup=kb
-        )
-        return
-
-    # ADDRESS
-    if user_id in waiting_address:
-        address = text
-
-        if message.location:
-            address = (
-                f"https://maps.google.com/?q="
-                f"{message.location.latitude},"
-                f"{message.location.longitude}"
-            )
-
-        if text == "⏭ Skip":
-            address = "Skip"
-
-        phone = waiting_address[user_id]
-        waiting_address.pop(user_id)
-
-        waiting_complex[user_id] = {
-            "phone": phone,
-            "address": address
-        }
-
-        kb = ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(KeyboardButton("⏭ Skip"))
-
-        await message.answer(
-            "🏢 Enter complex/building code:\n\n(optional)",
-            reply_markup=kb
-        )
-        return
-
-    # COMPLEX CODE
-    if user_id in waiting_complex:
-        complex_code = text
-
-        if text == "⏭ Skip":
-            complex_code = "Not provided"
-
-        data = waiting_complex[user_id]
-        waiting_complex.pop(user_id)
-
-        waiting_door[user_id] = {
-            "phone": data["phone"],
-            "address": data["address"],
-            "complex": complex_code
-        }
-
-        kb = ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(KeyboardButton("⏭ Skip"))
-
-        await message.answer(
-            "🚪 Enter door code:\n\n(optional)",
-            reply_markup=kb
-        )
-        return
-
-    # DOOR CODE
-    if user_id in waiting_door:
-        door_code = text
-
-        if text == "⏭ Skip":
-            door_code = "Not provided"
-
-        data = waiting_door[user_id]
-        waiting_door.pop(user_id)
-
-        cart = user_cart.get(user_id, [])
-
-        total = sum(price for _, price in cart)
-
-        order_text = ""
-
-        for item, price in cart:
-            order_text += f"• {item} — {price} TL\n"
-
-        username = (
-            f"@{message.from_user.username}"
-            if message.from_user.username
-            else "No username"
-        )
-
-        full_name = message.from_user.full_name
-
-        # SAVE TO DATABASE
-        cur.execute("""
-        INSERT INTO orders (
-            user_id,
-            username,
-            full_name,
-            items,
-            total,
-            phone,
-            address,
-            complex_code,
-            door_code
-        )
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        """, (
-            user_id,
-            username,
-            full_name,
-            order_text,
-            total,
-            data["phone"],
-            data["address"],
-            data["complex"],
-            door_code
-        ))
-
-        conn.commit()
-
-        final_text = (
-            f"📦 NEW ORDER\n\n"
-            f"{order_text}\n"
-            f"💰 Total: {total} TL\n"
-            f"📞 Phone: {data['phone']}\n"
-            f"🏠 Address: {data['address']}\n"
-            f"🏢 Complex code: {data['complex']}\n"
-            f"🚪 Door code: {door_code}\n\n"
-            f"👤 Client: {full_name}\n"
-            f"🆔 ID: {user_id}\n"
-            f"🔗 Username: {username}"
-        )
-
-        await bot.send_message(ADMIN_ID, final_text)
-
-        await message.answer(
-            "✅ Order sent successfully!\n\n"
-            "VAMO Cafe will contact you soon.",
-            reply_markup=main_keyboard()
-        )
-
-        user_cart[user_id] = []
+    await message.answer(text)
 
 # =========================
 # RUN
 # =========================
 
 if __name__ == "__main__":
-    Thread(target=run_web).start()
-    executor.start_polling(dp, skip_updates=True)
+
+    threading.Thread(
+        target=run_web
+    ).start()
+
+    executor.start_polling(
+        dp,
+        skip_updates=True
+    )
