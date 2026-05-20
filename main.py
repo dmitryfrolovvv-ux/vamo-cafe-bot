@@ -1,9 +1,8 @@
 import logging
-import os
 import sqlite3
+from threading import Thread
 
 from flask import Flask
-from threading import Thread
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import (
@@ -25,7 +24,7 @@ bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
 # =========================
-# RENDER PORT FIX
+# RENDER WEB SERVICE
 # =========================
 
 app = Flask(__name__)
@@ -122,6 +121,22 @@ def main_keyboard():
     return kb
 
 # =========================
+# ADMIN KEYBOARD
+# =========================
+
+def admin_keyboard():
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    kb.add("📦 Orders")
+    kb.add("📊 Stats")
+    kb.add("👥 Clients")
+    kb.add("💰 Revenue")
+    kb.add("🟢 Bot Status")
+    kb.add("⬅️ Exit Admin")
+
+    return kb
+
+# =========================
 # START
 # =========================
 
@@ -135,6 +150,195 @@ async def start(message: types.Message):
 
     await message.answer(
         "👋 Welcome to VAMO Cafe!\n\nChoose category:",
+        reply_markup=main_keyboard()
+    )
+
+# =========================
+# ADMIN PANEL
+# =========================
+
+@dp.message_handler(commands=["admin"])
+async def admin_panel(message: types.Message):
+
+    if message.from_user.id != OWNER_ID:
+        return
+
+    await message.answer(
+        "⚙️ ADMIN PANEL",
+        reply_markup=admin_keyboard()
+    )
+
+# =========================
+# ADMIN ORDERS
+# =========================
+
+@dp.message_handler(lambda message: message.text == "📦 Orders")
+async def admin_orders(message: types.Message):
+
+    if message.from_user.id != OWNER_ID:
+        return
+
+    cursor.execute("""
+    SELECT id, items, total, phone, address, created_at
+    FROM orders
+    ORDER BY id DESC
+    LIMIT 10
+    """)
+
+    orders = cursor.fetchall()
+
+    if not orders:
+        await message.answer("No orders yet.")
+        return
+
+    text = "📦 LAST ORDERS\n\n"
+
+    for order in orders:
+        text += (
+            f"#{order[0]}\n"
+            f"🛒 {order[1]}\n"
+            f"💰 {order[2]} TL\n"
+            f"📞 {order[3]}\n"
+            f"🏠 {order[4]}\n"
+            f"📅 {order[5]}\n\n"
+        )
+
+    await message.answer(text)
+
+# =========================
+# ADMIN STATS
+# =========================
+
+@dp.message_handler(lambda message: message.text == "📊 Stats")
+async def admin_stats(message: types.Message):
+
+    if message.from_user.id != OWNER_ID:
+        return
+
+    cursor.execute("SELECT COUNT(*) FROM orders")
+    total_orders = cursor.fetchone()[0]
+
+    cursor.execute("SELECT SUM(total) FROM orders")
+    revenue = cursor.fetchone()[0]
+
+    if revenue is None:
+        revenue = 0
+
+    cursor.execute("""
+    SELECT COUNT(DISTINCT telegram_id)
+    FROM users
+    """)
+
+    clients = cursor.fetchone()[0]
+
+    text = (
+        "📊 VAMO STATS\n\n"
+        f"📦 Orders: {total_orders}\n"
+        f"👥 Clients: {clients}\n"
+        f"💰 Revenue: {revenue} TL"
+    )
+
+    await message.answer(text)
+
+# =========================
+# ADMIN CLIENTS
+# =========================
+
+@dp.message_handler(lambda message: message.text == "👥 Clients")
+async def admin_clients(message: types.Message):
+
+    if message.from_user.id != OWNER_ID:
+        return
+
+    cursor.execute("""
+    SELECT DISTINCT
+        full_name,
+        username,
+        phone
+    FROM users
+    ORDER BY id DESC
+    LIMIT 10
+    """)
+
+    users = cursor.fetchall()
+
+    if not users:
+        await message.answer("No clients.")
+        return
+
+    text = "👥 LAST CLIENTS\n\n"
+
+    for user in users:
+
+        username = user[1]
+
+        if username:
+            username = f"@{username}"
+        else:
+            username = "No username"
+
+        text += (
+            f"👤 {user[0]}\n"
+            f"🔗 {username}\n"
+            f"📞 {user[2]}\n\n"
+        )
+
+    await message.answer(text)
+
+# =========================
+# ADMIN REVENUE
+# =========================
+
+@dp.message_handler(lambda message: message.text == "💰 Revenue")
+async def admin_revenue(message: types.Message):
+
+    if message.from_user.id != OWNER_ID:
+        return
+
+    cursor.execute("""
+    SELECT SUM(total)
+    FROM orders
+    """)
+
+    revenue = cursor.fetchone()[0]
+
+    if revenue is None:
+        revenue = 0
+
+    await message.answer(
+        f"💰 TOTAL REVENUE\n\n{revenue} TL"
+    )
+
+# =========================
+# BOT STATUS
+# =========================
+
+@dp.message_handler(lambda message: message.text == "🟢 Bot Status")
+async def bot_status(message: types.Message):
+
+    if message.from_user.id != OWNER_ID:
+        return
+
+    await message.answer(
+        "🟢 BOT ONLINE\n\n"
+        "✅ Database connected\n"
+        "✅ Orders active\n"
+        "✅ Notifications active\n"
+        "✅ SQLite working"
+    )
+
+# =========================
+# EXIT ADMIN
+# =========================
+
+@dp.message_handler(lambda message: message.text == "⬅️ Exit Admin")
+async def exit_admin(message: types.Message):
+
+    if message.from_user.id != OWNER_ID:
+        return
+
+    await message.answer(
+        "⬅️ Exited admin panel",
         reply_markup=main_keyboard()
     )
 
@@ -430,58 +634,6 @@ async def get_address(message: types.Message):
 
     user_data[user_id]["address"] = message.text
 
-    user_states[user_id] = "waiting_complex_code"
-
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add("Skip")
-
-    await message.answer(
-        "🏢 Enter complex/gate code (optional):",
-        reply_markup=keyboard
-    )
-
-# =========================
-# COMPLEX CODE
-# =========================
-
-@dp.message_handler(lambda message: user_states.get(message.from_user.id) == "waiting_complex_code")
-async def get_complex_code(message: types.Message):
-
-    user_id = message.from_user.id
-
-    if message.text.lower() == "skip":
-        complex_code = "Not provided"
-    else:
-        complex_code = message.text
-
-    user_data[user_id]["complex_code"] = complex_code
-
-    user_states[user_id] = "waiting_door_code"
-
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add("Skip")
-
-    await message.answer(
-        "🚪 Enter apartment door code (optional):",
-        reply_markup=keyboard
-    )
-
-# =========================
-# DOOR CODE
-# =========================
-
-@dp.message_handler(lambda message: user_states.get(message.from_user.id) == "waiting_door_code")
-async def get_door_code(message: types.Message):
-
-    user_id = message.from_user.id
-
-    if message.text.lower() == "skip":
-        door_code = "Not provided"
-    else:
-        door_code = message.text
-
-    user_data[user_id]["door_code"] = door_code
-
     cart = carts.get(user_id, [])
 
     total = sum(item["price"] for item in cart)
@@ -502,16 +654,6 @@ async def get_door_code(message: types.Message):
         f"https://maps.google.com/?q="
         f"{user_data[user_id]['latitude']},"
         f"{user_data[user_id]['longitude']}"
-    )
-
-    order_text += (
-        f"\n🏢 Complex code: "
-        f"{user_data[user_id]['complex_code']}"
-    )
-
-    order_text += (
-        f"\n🚪 Door code: "
-        f"{user_data[user_id]['door_code']}"
     )
 
     order_text += (
@@ -586,43 +728,6 @@ async def get_door_code(message: types.Message):
 
     carts[user_id] = []
     user_states[user_id] = None
-
-# =========================
-# ADMIN ORDERS
-# =========================
-
-@dp.message_handler(commands=["orders"])
-async def show_orders(message: types.Message):
-
-    if message.from_user.id != OWNER_ID:
-        return
-
-    cursor.execute("""
-    SELECT id, items, total, phone, address, created_at
-    FROM orders
-    ORDER BY id DESC
-    LIMIT 10
-    """)
-
-    orders = cursor.fetchall()
-
-    if not orders:
-        await message.answer("No orders yet.")
-        return
-
-    text = "📦 LAST ORDERS\n\n"
-
-    for order in orders:
-        text += (
-            f"#{order[0]}\n"
-            f"🛒 {order[1]}\n"
-            f"💰 {order[2]} TL\n"
-            f"📞 {order[3]}\n"
-            f"🏠 {order[4]}\n"
-            f"📅 {order[5]}\n\n"
-        )
-
-    await message.answer(text)
 
 # =========================
 # RUN
