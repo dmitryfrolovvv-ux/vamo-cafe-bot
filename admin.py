@@ -1,18 +1,14 @@
-# =========================================
-# ADMIN.PY
-# =========================================
-
+```python
 from aiogram import types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 ADMIN_ID = 1472777680
 
-# =========================================
+# =========================
 # STATES
-# =========================================
+# =========================
 
 class AdminStates(StatesGroup):
 
@@ -21,72 +17,103 @@ class AdminStates(StatesGroup):
     delete_category = State()
 
     add_product_category = State()
+
     add_product_name = State()
+
     add_product_price = State()
 
     delete_product = State()
 
-# =========================================
+# =========================
 # MENU
-# =========================================
+# =========================
 
 def admin_menu():
 
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
     kb.add(KeyboardButton("➕ Add category"))
-    kb.add(KeyboardButton("➖ Delete category"))
+
+    kb.add(KeyboardButton("❌ Delete category"))
 
     kb.add(KeyboardButton("➕ Add product"))
-    kb.add(KeyboardButton("➖ Delete product"))
+
+    kb.add(KeyboardButton("❌ Delete product"))
 
     kb.add(KeyboardButton("📦 Orders"))
+
     kb.add(KeyboardButton("📊 Stats"))
 
     kb.add(KeyboardButton("⬅ Back"))
 
     return kb
 
-# =========================================
+# =========================
 # REGISTER
-# =========================================
+# =========================
 
 def register_admin(dp, conn, cur):
 
-    # =====================================
+    # =====================
     # ADMIN PANEL
-    # =====================================
+    # =====================
 
-    @dp.message_handler(commands=["admin"])
-    async def admin_panel(message: types.Message):
+    @dp.message_handler(commands=["admin"], state="*")
+    async def admin_panel(message: types.Message, state: FSMContext):
 
         if message.from_user.id != ADMIN_ID:
             return
+
+        await state.finish()
 
         await message.answer(
             "⚙ ADMIN PANEL",
             reply_markup=admin_menu()
         )
 
-    # =====================================
-    # ADD CATEGORY
-    # =====================================
+    # =====================
+    # BACK
+    # =====================
 
-    @dp.message_handler(lambda m: m.text == "➕ Add category")
-    async def add_category_start(message: types.Message):
+    @dp.message_handler(lambda m: m.text == "⬅ Back", state="*")
+    async def admin_back(message: types.Message, state: FSMContext):
+
+        if message.from_user.id != ADMIN_ID:
+            return
+
+        await state.finish()
+
+        await message.answer(
+            "⬅ Back",
+            reply_markup=admin_menu()
+        )
+
+    # =====================
+    # ADD CATEGORY
+    # =====================
+
+    @dp.message_handler(lambda m: m.text == "➕ Add category", state="*")
+    async def add_category_start(message: types.Message, state: FSMContext):
+
+        if message.from_user.id != ADMIN_ID:
+            return
+
+        await state.finish()
+
+        await message.answer("🗂 Enter category name")
 
         await AdminStates.add_category.set()
 
-        await message.answer("📂 Enter category name")
-
     @dp.message_handler(state=AdminStates.add_category)
     async def add_category_finish(message: types.Message, state: FSMContext):
+
+        category = message.text
 
         try:
 
             cur.execute(
                 "INSERT INTO categories(name) VALUES(%s)",
-                (message.text,)
+                (category,)
             )
 
             conn.commit()
@@ -104,30 +131,32 @@ def register_admin(dp, conn, cur):
 
         await state.finish()
 
-    # =====================================
+    # =====================
     # DELETE CATEGORY
-    # =====================================
+    # =====================
 
-    @dp.message_handler(lambda m: m.text == "➖ Delete category")
-    async def delete_category_start(message: types.Message):
+    @dp.message_handler(lambda m: m.text == "❌ Delete category", state="*")
+    async def delete_category_start(message: types.Message, state: FSMContext):
 
-        await AdminStates.delete_category.set()
+        if message.from_user.id != ADMIN_ID:
+            return
+
+        await state.finish()
 
         await message.answer("🗑 Enter category name")
 
+        await AdminStates.delete_category.set()
+
     @dp.message_handler(state=AdminStates.delete_category)
     async def delete_category_finish(message: types.Message, state: FSMContext):
+
+        category = message.text
 
         try:
 
             cur.execute(
                 "DELETE FROM categories WHERE name=%s",
-                (message.text,)
-            )
-
-            cur.execute(
-                "DELETE FROM products WHERE category=%s",
-                (message.text,)
+                (category,)
             )
 
             conn.commit()
@@ -145,52 +174,59 @@ def register_admin(dp, conn, cur):
 
         await state.finish()
 
-    # =====================================
+    # =====================
     # ADD PRODUCT
-    # =====================================
+    # =====================
 
-    @dp.message_handler(lambda m: m.text == "➕ Add product")
-    async def add_product_start(message: types.Message):
+    @dp.message_handler(lambda m: m.text == "➕ Add product", state="*")
+    async def add_product_start(message: types.Message, state: FSMContext):
 
-        await AdminStates.add_product_category.set()
+        if message.from_user.id != ADMIN_ID:
+            return
+
+        await state.finish()
 
         await message.answer("📂 Enter category")
 
+        await AdminStates.add_product_category.set()
+
     @dp.message_handler(state=AdminStates.add_product_category)
-    async def add_product_name(message: types.Message, state: FSMContext):
+    async def add_product_category(message: types.Message, state: FSMContext):
 
         await state.update_data(category=message.text)
 
-        await AdminStates.add_product_name.set()
-
         await message.answer("🍔 Enter product name")
 
+        await AdminStates.add_product_name.set()
+
     @dp.message_handler(state=AdminStates.add_product_name)
-    async def add_product_price(message: types.Message, state: FSMContext):
+    async def add_product_name(message: types.Message, state: FSMContext):
 
-        await state.update_data(product_name=message.text)
-
-        await AdminStates.add_product_price.set()
+        await state.update_data(name=message.text)
 
         await message.answer("💰 Enter product price")
 
-    @dp.message_handler(state=AdminStates.add_product_price)
-    async def add_product_finish(message: types.Message, state: FSMContext):
+        await AdminStates.add_product_price.set()
 
-        data = await state.get_data()
+    @dp.message_handler(state=AdminStates.add_product_price)
+    async def add_product_price(message: types.Message, state: FSMContext):
 
         try:
 
+            price = int(message.text)
+
+            data = await state.get_data()
+
+            category = data["category"]
+
+            name = data["name"]
+
             cur.execute(
                 """
-                INSERT INTO products(category, product_name, price)
+                INSERT INTO products(category, name, price)
                 VALUES(%s,%s,%s)
                 """,
-                (
-                    data["category"],
-                    data["product_name"],
-                    int(message.text)
-                )
+                (category, name, price)
             )
 
             conn.commit()
@@ -208,25 +244,32 @@ def register_admin(dp, conn, cur):
 
         await state.finish()
 
-    # =====================================
+    # =====================
     # DELETE PRODUCT
-    # =====================================
+    # =====================
 
-    @dp.message_handler(lambda m: m.text == "➖ Delete product")
-    async def delete_product_start(message: types.Message):
+    @dp.message_handler(lambda m: m.text == "❌ Delete product", state="*")
+    async def delete_product_start(message: types.Message, state: FSMContext):
 
-        await AdminStates.delete_product.set()
+        if message.from_user.id != ADMIN_ID:
+            return
+
+        await state.finish()
 
         await message.answer("🗑 Enter product name")
+
+        await AdminStates.delete_product.set()
 
     @dp.message_handler(state=AdminStates.delete_product)
     async def delete_product_finish(message: types.Message, state: FSMContext):
 
+        product = message.text
+
         try:
 
             cur.execute(
-                "DELETE FROM products WHERE product_name=%s",
-                (message.text,)
+                "DELETE FROM products WHERE name=%s",
+                (product,)
             )
 
             conn.commit()
@@ -244,42 +287,35 @@ def register_admin(dp, conn, cur):
 
         await state.finish()
 
-    # =====================================
+    # =====================
     # ORDERS
-    # =====================================
+    # =====================
 
-    @dp.message_handler(lambda m: m.text == "📦 Orders")
-    async def orders(message: types.Message):
+    @dp.message_handler(lambda m: m.text == "📦 Orders", state="*")
+    async def orders_handler(message: types.Message, state: FSMContext):
 
         if message.from_user.id != ADMIN_ID:
             return
 
+        await state.finish()
+
         try:
 
             cur.execute(
-                """
-                SELECT order_text
-                FROM orders
-                ORDER BY id DESC
-                LIMIT 10
-                """
+                "SELECT order_text FROM orders ORDER BY id DESC LIMIT 10"
             )
 
             orders = cur.fetchall()
 
             if not orders:
 
-                await message.answer("❌ No orders")
+                await message.answer("📭 No orders")
 
                 return
 
-            text = "📦 LAST ORDERS\n\n"
-
             for order in orders:
 
-                text += order[0] + "\n\n"
-
-            await message.answer(text)
+                await message.answer(order[0])
 
         except Exception as e:
 
@@ -287,56 +323,37 @@ def register_admin(dp, conn, cur):
 
             await message.answer(str(e))
 
-    # =====================================
+    # =====================
     # STATS
-    # =====================================
+    # =====================
 
-    @dp.message_handler(lambda m: m.text == "📊 Stats")
-    async def stats(message: types.Message):
+    @dp.message_handler(lambda m: m.text == "📊 Stats", state="*")
+    async def stats_handler(message: types.Message, state: FSMContext):
 
         if message.from_user.id != ADMIN_ID:
             return
 
+        await state.finish()
+
         try:
 
-            cur.execute(
-                "SELECT COUNT(*) FROM orders"
-            )
+            cur.execute("SELECT COUNT(*) FROM orders")
 
             orders_count = cur.fetchone()[0]
 
-            cur.execute(
-                """
-                SELECT COUNT(*)
-                FROM products
-                """
+            cur.execute("SELECT COUNT(DISTINCT user_id) FROM orders")
+
+            users_count = cur.fetchone()[0]
+
+            await message.answer(
+                f"📊 STATS\n\n"
+                f"📦 Orders: {orders_count}\n"
+                f"👤 Users: {users_count}"
             )
-
-            products_count = cur.fetchone()[0]
-
-            cur.execute(
-                """
-                SELECT COUNT(*)
-                FROM categories
-                """
-            )
-
-            categories_count = cur.fetchone()[0]
-
-            text = f"""
-📊 STATISTICS
-
-📦 Orders: {orders_count}
-
-🍔 Products: {products_count}
-
-📂 Categories: {categories_count}
-"""
-
-            await message.answer(text)
 
         except Exception as e:
 
             conn.rollback()
 
             await message.answer(str(e))
+```
