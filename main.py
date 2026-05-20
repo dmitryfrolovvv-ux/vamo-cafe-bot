@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS orders (
 conn.commit()
 
 # =====================================
-# DATA
+# MENU
 # =====================================
 
 menu_data = {
@@ -152,7 +152,7 @@ async def start(message: types.Message):
     )
 
 # =====================================
-# SHOW CATEGORY
+# CATEGORY
 # =====================================
 
 @dp.message_handler(lambda m: m.text in menu_data)
@@ -174,7 +174,12 @@ async def show_category(message: types.Message):
 # ADD TO CART
 # =====================================
 
-@dp.message_handler(lambda m: "—" in m.text and "TL" in m.text)
+@dp.message_handler(
+    lambda m:
+    "—" in m.text
+    and "TL" in m.text
+    and "Checkout" not in m.text
+)
 async def add_to_cart(message: types.Message):
 
     user_id = message.from_user.id
@@ -235,7 +240,7 @@ async def cart(message: types.Message):
         resize_keyboard=True
     )
 
-    kb.add("✅ Checkout")
+    kb.add("Checkout")
     kb.add("⬅️ Back")
 
     await message.answer(
@@ -247,7 +252,7 @@ async def cart(message: types.Message):
 # CHECKOUT
 # =====================================
 
-@dp.message_handler(lambda m: m.text == "✅ Checkout")
+@dp.message_handler(lambda m: m.text == "Checkout")
 async def checkout(message: types.Message):
 
     user_id = message.from_user.id
@@ -397,7 +402,7 @@ async def orders(message: types.Message):
     await message.answer(text)
 
 # =====================================
-# STATISTICS
+# STATS
 # =====================================
 
 @dp.message_handler(lambda m: m.text == "📊 Statistics")
