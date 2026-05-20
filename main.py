@@ -2,8 +2,6 @@ import logging
 import psycopg2
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from flask import Flask
-from threading import Thread
 
 # =========================================
 # CONFIG
@@ -26,19 +24,6 @@ logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
-
-# =========================================
-# FLASK
-# =========================================
-
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    return "VAMO BOT WORKING"
-
-def run_web():
-    app.run(host="0.0.0.0", port=10000)
 
 # =========================================
 # DATABASE
@@ -104,7 +89,8 @@ def main_menu():
 
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
-    cur.execute("SELECT name FROM categories")
+    cur.execute("SELECT name FROM categories ORDER BY id")
+
     categories = cur.fetchall()
 
     for cat in categories:
@@ -158,13 +144,13 @@ async def admin_panel(message: types.Message):
 async def universal(message: types.Message):
 
     user_id = message.from_user.id
-    text = message.text
+    text = message.text.strip()
 
     # =====================================
     # BACK
     # =====================================
 
-    if text == "⬅ Back":
+    if text.upper() == "BACK" or text == "⬅ Back":
 
         await message.answer(
             "⬅ Main menu",
@@ -177,7 +163,7 @@ async def universal(message: types.Message):
     # CART
     # =====================================
 
-    if text == "CART":
+    if text.upper() == "CART":
 
         cart_items = user_carts.get(user_id, [])
 
@@ -198,6 +184,7 @@ async def universal(message: types.Message):
             txt += f"• {item}\n"
 
             try:
+
                 price = int(
                     item.split("—")[1]
                     .replace("TL", "")
@@ -212,8 +199,9 @@ async def universal(message: types.Message):
         txt += f"\n💰 Total: {total} TL"
 
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
         kb.add("CHECKOUT")
-        kb.add("⬅ Back")
+        kb.add("BACK")
 
         await message.answer(
             txt,
@@ -226,7 +214,7 @@ async def universal(message: types.Message):
     # CHECKOUT
     # =====================================
 
-    if text == "CHECKOUT":
+    if text.upper() == "CHECKOUT":
 
         try:
 
@@ -332,6 +320,7 @@ async def universal(message: types.Message):
             admin_state[user_id] = "product_category"
 
             cur.execute("SELECT name FROM categories")
+
             cats = cur.fetchall()
 
             kb = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -351,6 +340,7 @@ async def universal(message: types.Message):
             admin_state[user_id] = "delete_category"
 
             cur.execute("SELECT name FROM categories")
+
             cats = cur.fetchall()
 
             kb = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -445,12 +435,12 @@ async def universal(message: types.Message):
         try:
 
             cur.execute(
-                "DELETE FROM categories WHERE name=%s",
+                "DELETE FROM products WHERE category=%s",
                 (text,)
             )
 
             cur.execute(
-                "DELETE FROM products WHERE category=%s",
+                "DELETE FROM categories WHERE name=%s",
                 (text,)
             )
 
@@ -562,7 +552,7 @@ async def universal(message: types.Message):
 
                 kb.add(product_text)
 
-            kb.add("⬅ Back")
+            kb.add("BACK")
 
             await message.answer(
                 txt,
@@ -574,7 +564,6 @@ async def universal(message: types.Message):
     except Exception as e:
 
         conn.rollback()
-
         print(e)
 
     # =====================================
@@ -598,9 +587,14 @@ async def universal(message: types.Message):
 
                 user_carts[user_id].append(btn)
 
+                kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+                kb.add("CART")
+                kb.add("BACK")
+
                 await message.answer(
                     f"✅ Added to cart:\n{btn}",
-                    reply_markup=main_menu()
+                    reply_markup=kb
                 )
 
                 return
@@ -608,18 +602,22 @@ async def universal(message: types.Message):
     except Exception as e:
 
         conn.rollback()
-
         print(e)
 
 # =========================================
-# RUN
+# START POLLING
 # =========================================
+
+async def on_startup(dp):
+
+    await bot.delete_webhook(
+        drop_pending_updates=True
+    )
 
 if __name__ == "__main__":
 
-    Thread(target=run_web).start()
-
     executor.start_polling(
         dp,
-        skip_updates=True
+        skip_updates=True,
+        on_startup=on_startup
     )
