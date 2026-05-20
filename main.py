@@ -117,7 +117,13 @@ async def choose_language(message: types.Message):
 ])
 async def show_category(message: types.Message):
 
-    category = message.text.replace("🌭 ", "").replace("🌯 ", "").replace("🥟 ", "").replace("🥤 ", "")
+    category = (
+        message.text
+        .replace("🌭 ", "")
+        .replace("🌯 ", "")
+        .replace("🥟 ", "")
+        .replace("🥤 ", "")
+    )
 
     items = menu.get(category, [])
 
@@ -271,12 +277,16 @@ async def process_contact(message: types.Message):
         cart_text += f"• {name} — {price} TL\n"
         total += price
 
+    full_name = message.from_user.full_name
+    telegram_id = message.from_user.id
     username = message.from_user.username
 
     if username:
         username_text = f"@{username}"
+        user_link = f"https://t.me/{username}"
     else:
         username_text = "No username"
+        user_link = "No link"
 
     order_text = f"""
 📦 NEW ORDER
@@ -285,7 +295,11 @@ async def process_contact(message: types.Message):
 
 💰 Total: {total} TL
 📞 Phone: {phone}
-👤 User: {username_text}
+
+👤 Client: {full_name}
+🆔 ID: {telegram_id}
+🔗 Username: {username_text}
+🌐 Link: {user_link}
 """
 
     # SEND ORDER TO OWNER
@@ -308,15 +322,23 @@ async def healthcheck(request):
     return web.Response(text="Bot is running!")
 
 async def on_startup(dp):
+
     app = web.Application()
+
     app.router.add_get('/', healthcheck)
 
     runner = web.AppRunner(app)
+
     await runner.setup()
 
     port = int(os.environ.get("PORT", 10000))
 
-    site = web.TCPSite(runner, "0.0.0.0", port)
+    site = web.TCPSite(
+        runner,
+        "0.0.0.0",
+        port
+    )
+
     await site.start()
 
     print(f"✅ Web server started on port {port}")
