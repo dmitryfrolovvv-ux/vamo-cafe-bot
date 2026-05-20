@@ -13,18 +13,14 @@ class AdminStates(StatesGroup):
 
     add_category = State()
 
-    delete_category = State()
-
     add_product_category = State()
 
     add_product_name = State()
 
     add_product_price = State()
 
-    delete_product = State()
-
 # =========================
-# MENU
+# ADMIN MENU
 # =========================
 
 def admin_menu():
@@ -106,13 +102,11 @@ def register_admin(dp, conn, cur):
     @dp.message_handler(state=AdminStates.add_category)
     async def add_category_finish(message: types.Message, state: FSMContext):
 
-        category = message.text
-
         try:
 
             cur.execute(
                 "INSERT INTO categories(name) VALUES(%s)",
-                (category,)
+                (message.text,)
             )
 
             conn.commit()
@@ -135,26 +129,61 @@ def register_admin(dp, conn, cur):
     # =====================
 
     @dp.message_handler(lambda m: m.text == "❌ Delete category", state="*")
-    async def delete_category_start(message: types.Message, state: FSMContext):
+    async def delete_category_menu(message: types.Message, state: FSMContext):
 
         if message.from_user.id != ADMIN_ID:
             return
 
         await state.finish()
 
-        await message.answer("🗑 Enter category name")
+        cur.execute(
+            "SELECT name FROM categories"
+        )
 
-        await AdminStates.delete_category.set()
+        categories = cur.fetchall()
 
-    @dp.message_handler(state=AdminStates.delete_category)
-    async def delete_category_finish(message: types.Message, state: FSMContext):
+        if not categories:
 
-        category = message.text
+            await message.answer("❌ No categories")
+
+            return
+
+        kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+        for category in categories:
+
+            kb.add(
+                KeyboardButton(
+                    f"🗑 {category[0]}"
+                )
+            )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+
+        await message.answer(
+            "🗑 Select category to delete",
+            reply_markup=kb
+        )
+
+    @dp.message_handler(lambda m: m.text.startswith("🗑 "), state="*")
+    async def delete_category_finish(message: types.Message):
+
+        if message.from_user.id != ADMIN_ID:
+            return
+
+        category = message.text.replace("🗑 ", "")
 
         try:
 
             cur.execute(
                 "DELETE FROM categories WHERE name=%s",
+                (category,)
+            )
+
+            cur.execute(
+                "DELETE FROM products WHERE category=%s",
                 (category,)
             )
 
@@ -171,8 +200,6 @@ def register_admin(dp, conn, cur):
 
             await message.answer(str(e))
 
-        await state.finish()
-
     # =====================
     # ADD PRODUCT
     # =====================
@@ -185,25 +212,60 @@ def register_admin(dp, conn, cur):
 
         await state.finish()
 
-        await message.answer("📂 Enter category")
+        cur.execute(
+            "SELECT name FROM categories"
+        )
+
+        categories = cur.fetchall()
+
+        if not categories:
+
+            await message.answer("❌ No categories")
+
+            return
+
+        kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+        for category in categories:
+
+            kb.add(
+                KeyboardButton(category[0])
+            )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+
+        await message.answer(
+            "📂 Select category",
+            reply_markup=kb
+        )
 
         await AdminStates.add_product_category.set()
 
     @dp.message_handler(state=AdminStates.add_product_category)
     async def add_product_category(message: types.Message, state: FSMContext):
 
-        await state.update_data(category=message.text)
+        await state.update_data(
+            category=message.text
+        )
 
-        await message.answer("🍔 Enter product name")
+        await message.answer(
+            "🍔 Enter product name"
+        )
 
         await AdminStates.add_product_name.set()
 
     @dp.message_handler(state=AdminStates.add_product_name)
     async def add_product_name(message: types.Message, state: FSMContext):
 
-        await state.update_data(name=message.text)
+        await state.update_data(
+            name=message.text
+        )
 
-        await message.answer("💰 Enter product price")
+        await message.answer(
+            "💰 Enter product price"
+        )
 
         await AdminStates.add_product_price.set()
 
@@ -225,7 +287,11 @@ def register_admin(dp, conn, cur):
                 INSERT INTO products(category, name, price)
                 VALUES(%s,%s,%s)
                 """,
-                (category, name, price)
+                (
+                    category,
+                    name,
+                    price
+                )
             )
 
             conn.commit()
@@ -248,21 +314,51 @@ def register_admin(dp, conn, cur):
     # =====================
 
     @dp.message_handler(lambda m: m.text == "❌ Delete product", state="*")
-    async def delete_product_start(message: types.Message, state: FSMContext):
+    async def delete_product_menu(message: types.Message, state: FSMContext):
 
         if message.from_user.id != ADMIN_ID:
             return
 
         await state.finish()
 
-        await message.answer("🗑 Enter product name")
+        cur.execute(
+            "SELECT name FROM products"
+        )
 
-        await AdminStates.delete_product.set()
+        products = cur.fetchall()
 
-    @dp.message_handler(state=AdminStates.delete_product)
-    async def delete_product_finish(message: types.Message, state: FSMContext):
+        if not products:
 
-        product = message.text
+            await message.answer("❌ No products")
+
+            return
+
+        kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+        for product in products:
+
+            kb.add(
+                KeyboardButton(
+                    f"🗑 {product[0]}"
+                )
+            )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+
+        await message.answer(
+            "🗑 Select product to delete",
+            reply_markup=kb
+        )
+
+    @dp.message_handler(lambda m: m.text.startswith("🗑 "), state="*")
+    async def delete_product_finish(message: types.Message):
+
+        if message.from_user.id != ADMIN_ID:
+            return
+
+        product = message.text.replace("🗑 ", "")
 
         try:
 
@@ -284,8 +380,6 @@ def register_admin(dp, conn, cur):
 
             await message.answer(str(e))
 
-        await state.finish()
-
     # =====================
     # ORDERS
     # =====================
@@ -301,7 +395,12 @@ def register_admin(dp, conn, cur):
         try:
 
             cur.execute(
-                "SELECT order_text FROM orders ORDER BY id DESC LIMIT 10"
+                """
+                SELECT order_text
+                FROM orders
+                ORDER BY id DESC
+                LIMIT 10
+                """
             )
 
             orders = cur.fetchall()
@@ -336,18 +435,29 @@ def register_admin(dp, conn, cur):
 
         try:
 
-            cur.execute("SELECT COUNT(*) FROM orders")
+            cur.execute(
+                "SELECT COUNT(*) FROM orders"
+            )
 
             orders_count = cur.fetchone()[0]
 
-            cur.execute("SELECT COUNT(DISTINCT user_id) FROM orders")
+            cur.execute(
+                "SELECT COUNT(*) FROM products"
+            )
 
-            users_count = cur.fetchone()[0]
+            products_count = cur.fetchone()[0]
+
+            cur.execute(
+                "SELECT COUNT(*) FROM categories"
+            )
+
+            categories_count = cur.fetchone()[0]
 
             await message.answer(
                 f"📊 STATS\n\n"
                 f"📦 Orders: {orders_count}\n"
-                f"👤 Users: {users_count}"
+                f"🍔 Products: {products_count}\n"
+                f"📂 Categories: {categories_count}"
             )
 
         except Exception as e:
