@@ -345,7 +345,7 @@ async def universal(message: types.Message):
     except Exception as e:
         conn.rollback()
         print(e)
-        await message.answer("❌ Error")
+        await message.answer(str(e))
 
 # =========================
 # RUN
