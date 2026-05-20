@@ -1,55 +1,96 @@
 import os
+import logging
+from aiohttp import web
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import (
+    ReplyKeyboardMarkup,
+    KeyboardButton
+)
 from aiogram.utils import executor
 
-TOKEN = os.getenv("BOT_TOKEN")
+# =========================
+# CONFIG
+# =========================
 
-bot = Bot(token=TOKEN)
+API_TOKEN = os.getenv("BOT_TOKEN")
+
+OWNER_ID = 1472777680
+
+logging.basicConfig(level=logging.INFO)
+
+bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-user_language = {}
-user_cart = {}
+# =========================
+# CART STORAGE
+# =========================
 
-ADMIN_ID = 1472777680  # потом заменим
+carts = {}
 
-# ---------- LANGUAGES ----------
+# =========================
+# MENU
+# =========================
 
-language_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-language_keyboard.add("🇷🇺 Русский")
-language_keyboard.add("🇹🇷 Türkçe")
-language_keyboard.add("🇬🇧 English")
-language_keyboard.add("🇩🇪 Deutsch")
+menu = {
+    "Hot Dogs": [
+        {"name": "Classic Hot Dog", "price": 150},
+        {"name": "Cheese Hot Dog", "price": 180},
+        {"name": "Double Hot Dog", "price": 220},
+    ],
+    "Shawarma": [
+        {"name": "Chicken Shawarma", "price": 200},
+        {"name": "Beef Shawarma", "price": 250},
+        {"name": "Mega Shawarma", "price": 320},
+    ],
+    "Chebureki": [
+        {"name": "Classic Cheburek", "price": 170},
+        {"name": "Cheese Cheburek", "price": 190},
+    ],
+    "Drinks": [
+        {"name": "Cola", "price": 60},
+        {"name": "Ayran", "price": 50},
+        {"name": "Water", "price": 30},
+    ]
+}
 
-# ---------- MAIN MENU ----------
+# =========================
+# MAIN MENU
+# =========================
 
 def get_main_menu():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("🌭 Hot Dogs")
-    kb.add("🌯 Shawarma")
-    kb.add("🥟 Chebureki")
-    kb.add("🥤 Drinks")
-    kb.add("🛒 Cart")
-    kb.add("🌐 Change Language")
+
+    kb.add(KeyboardButton("🌭 Hot Dogs"))
+    kb.add(KeyboardButton("🌯 Shawarma"))
+    kb.add(KeyboardButton("🥟 Chebureki"))
+    kb.add(KeyboardButton("🥤 Drinks"))
+    kb.add(KeyboardButton("🛒 Cart"))
+    kb.add(KeyboardButton("🌐 Change Language"))
+
     return kb
 
-# ---------- BACK BUTTON ----------
+# =========================
+# START
+# =========================
 
-def back_keyboard():
+@dp.message_handler(commands=['start'])
+async def start_cmd(message: types.Message):
+
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("⬅ Back")
-    return kb
 
-# ---------- START ----------
+    kb.add(KeyboardButton("🇷🇺 Русский"))
+    kb.add(KeyboardButton("🇹🇷 Türkçe"))
+    kb.add(KeyboardButton("🇬🇧 English"))
+    kb.add(KeyboardButton("🇩🇪 Deutsch"))
 
-@dp.message_handler(commands=["start"])
-async def start(message: types.Message):
     await message.answer(
         "👋 Welcome to VAMO Cafe!\n\nChoose language:",
-        reply_markup=language_keyboard
+        reply_markup=kb
     )
 
-# ---------- LANGUAGE ----------
+# =========================
+# LANGUAGE
+# =========================
 
 @dp.message_handler(lambda message: message.text in [
     "🇷🇺 Русский",
@@ -57,234 +98,236 @@ async def start(message: types.Message):
     "🇬🇧 English",
     "🇩🇪 Deutsch"
 ])
-async def language_selected(message: types.Message):
-    user_language[message.from_user.id] = message.text
-    user_cart[message.from_user.id] = []
+async def choose_language(message: types.Message):
 
     await message.answer(
         "✅ Language selected!\n\nChoose category:",
         reply_markup=get_main_menu()
     )
 
-# ---------- CHANGE LANGUAGE ----------
+# =========================
+# CATEGORY MENU
+# =========================
 
-@dp.message_handler(lambda message: message.text == "🌐 Change Language")
-async def change_language(message: types.Message):
-    await message.answer(
-        "🌍 Choose new language:",
-        reply_markup=language_keyboard
-    )
+@dp.message_handler(lambda message: message.text in [
+    "🌭 Hot Dogs",
+    "🌯 Shawarma",
+    "🥟 Chebureki",
+    "🥤 Drinks"
+])
+async def show_category(message: types.Message):
 
-# ---------- HOT DOGS ----------
+    category = message.text.replace("🌭 ", "").replace("🌯 ", "").replace("🥟 ", "").replace("🥤 ", "")
 
-@dp.message_handler(lambda message: message.text == "🌭 Hot Dogs")
-async def hotdogs(message: types.Message):
-    text = (
-        "🌭 Hot Dogs Menu\n\n"
-        "1️⃣ Classic Hot Dog — 150 TL\n"
-        "2️⃣ Cheese Hot Dog — 180 TL\n"
-        "3️⃣ Double Hot Dog — 220 TL"
-    )
+    items = menu.get(category, [])
+
+    text = f"{message.text} Menu\n\n"
 
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("Classic Hot Dog")
-    kb.add("Cheese Hot Dog")
-    kb.add("Double Hot Dog")
-    kb.add("⬅ Back")
+
+    for item in items:
+        text += f"{item['name']} — {item['price']} TL\n"
+
+        kb.add(
+            KeyboardButton(
+                f"➕ {item['name']} ({item['price']} TL)"
+            )
+        )
+
+    kb.add(KeyboardButton("⬅️ Back"))
 
     await message.answer(text, reply_markup=kb)
 
-# ---------- SHAWARMA ----------
+# =========================
+# ADD TO CART
+# =========================
 
-@dp.message_handler(lambda message: message.text == "🌯 Shawarma")
-async def shawarma(message: types.Message):
-    text = (
-        "🌯 Shawarma Menu\n\n"
-        "1️⃣ Chicken Shawarma — 200 TL\n"
-        "2️⃣ Beef Shawarma — 250 TL\n"
-        "3️⃣ Mega Shawarma — 320 TL"
-    )
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("Chicken Shawarma")
-    kb.add("Beef Shawarma")
-    kb.add("Mega Shawarma")
-    kb.add("⬅ Back")
-
-    await message.answer(text, reply_markup=kb)
-
-# ---------- CHEBUREKI ----------
-
-@dp.message_handler(lambda message: message.text == "🥟 Chebureki")
-async def chebureki(message: types.Message):
-    text = (
-        "🥟 Chebureki Menu\n\n"
-        "1️⃣ Beef Cheburek — 170 TL\n"
-        "2️⃣ Cheese Cheburek — 150 TL\n"
-        "3️⃣ Mixed Cheburek — 190 TL"
-    )
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("Beef Cheburek")
-    kb.add("Cheese Cheburek")
-    kb.add("Mixed Cheburek")
-    kb.add("⬅ Back")
-
-    await message.answer(text, reply_markup=kb)
-
-# ---------- DRINKS ----------
-
-@dp.message_handler(lambda message: message.text == "🥤 Drinks")
-async def drinks(message: types.Message):
-    text = (
-        "🥤 Drinks Menu\n\n"
-        "1️⃣ Cola — 50 TL\n"
-        "2️⃣ Ayran — 40 TL\n"
-        "3️⃣ Water — 20 TL"
-    )
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("Cola")
-    kb.add("Ayran")
-    kb.add("Water")
-    kb.add("⬅ Back")
-
-    await message.answer(text, reply_markup=kb)
-
-# ---------- ADD TO CART ----------
-
-prices = {
-    "Classic Hot Dog": 150,
-    "Cheese Hot Dog": 180,
-    "Double Hot Dog": 220,
-
-    "Chicken Shawarma": 200,
-    "Beef Shawarma": 250,
-    "Mega Shawarma": 320,
-
-    "Beef Cheburek": 170,
-    "Cheese Cheburek": 150,
-    "Mixed Cheburek": 190,
-
-    "Cola": 50,
-    "Ayran": 40,
-    "Water": 20
-}
-
-@dp.message_handler(lambda message: message.text in prices)
+@dp.message_handler(lambda message: message.text.startswith("➕"))
 async def add_to_cart(message: types.Message):
+
     user_id = message.from_user.id
 
-    if user_id not in user_cart:
-        user_cart[user_id] = []
+    if user_id not in carts:
+        carts[user_id] = []
 
-    item = message.text
-    price = prices[item]
+    text = message.text
 
-    user_cart[user_id].append((item, price))
+    for category in menu.values():
+        for item in category:
 
-    await message.answer(
-        f"✅ {item} added to cart!\n💰 {price} TL",
-        reply_markup=get_main_menu()
-    )
+            button_text = f"➕ {item['name']} ({item['price']} TL)"
 
-# ---------- CART ----------
+            if text == button_text:
+                carts[user_id].append(item)
+
+                await message.answer(
+                    f"✅ Added to cart:\n\n{item['name']} — {item['price']} TL"
+                )
+                return
+
+# =========================
+# VIEW CART
+# =========================
 
 @dp.message_handler(lambda message: message.text == "🛒 Cart")
-async def cart(message: types.Message):
+async def show_cart(message: types.Message):
+
     user_id = message.from_user.id
 
-    cart_items = user_cart.get(user_id, [])
-
-    if not cart_items:
-        await message.answer(
-            "🛒 Your cart is empty!",
-            reply_markup=get_main_menu()
-        )
+    if user_id not in carts or not carts[user_id]:
+        await message.answer("🛒 Your cart is empty!")
         return
 
+    total = 0
     text = "🛒 Your Cart\n\n"
 
-    total = 0
-
-    for item, price in cart_items:
-        text += f"🌭 {item} — {price} TL\n"
-        total += price
+    for item in carts[user_id]:
+        text += f"🌭 {item['name']} — {item['price']} TL\n"
+        total += item['price']
 
     text += f"\n💰 Total: {total} TL"
 
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("✅ Checkout")
-    kb.add("🗑 Clear Cart")
-    kb.add("⬅ Back")
+
+    kb.add(KeyboardButton("✅ Checkout"))
+    kb.add(KeyboardButton("🗑 Clear Cart"))
+    kb.add(KeyboardButton("⬅️ Back"))
 
     await message.answer(text, reply_markup=kb)
 
-# ---------- CLEAR CART ----------
+# =========================
+# CLEAR CART
+# =========================
 
 @dp.message_handler(lambda message: message.text == "🗑 Clear Cart")
 async def clear_cart(message: types.Message):
-    user_cart[message.from_user.id] = []
+
+    user_id = message.from_user.id
+
+    carts[user_id] = []
 
     await message.answer(
-        "🗑 Cart cleared!",
+        "🗑 Cart cleared.",
         reply_markup=get_main_menu()
     )
 
-# ---------- CHECKOUT ----------
+# =========================
+# BACK BUTTON
+# =========================
+
+@dp.message_handler(lambda message: message.text == "⬅️ Back")
+async def back_to_main(message: types.Message):
+
+    await message.answer(
+        "⬅️ Returned to main menu",
+        reply_markup=get_main_menu()
+    )
+
+# =========================
+# CHECKOUT
+# =========================
 
 @dp.message_handler(lambda message: message.text == "✅ Checkout")
 async def checkout(message: types.Message):
-    await message.answer(
-        "📞 Send your phone number:",
-        reply_markup=back_keyboard()
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    contact_btn = KeyboardButton(
+        "📞 Send phone number",
+        request_contact=True
     )
 
-# ---------- PHONE ----------
+    kb.add(contact_btn)
 
-@dp.message_handler(lambda message: message.text.startswith("+"))
-async def phone(message: types.Message):
+    await message.answer(
+        "📞 Send your phone number:",
+        reply_markup=kb
+    )
+
+# =========================
+# RECEIVE CONTACT
+# =========================
+
+@dp.message_handler(content_types=['contact'])
+async def process_contact(message: types.Message):
+
     user_id = message.from_user.id
 
-    if user_id not in user_cart:
+    if user_id not in carts or not carts[user_id]:
+        await message.answer("🛒 Your cart is empty!")
         return
 
-    phone_number = message.text
+    phone = message.contact.phone_number
 
-    cart_items = user_cart[user_id]
-
-    text = "🛍 NEW ORDER\n\n"
+    cart_items = carts[user_id]
 
     total = 0
+    cart_text = ""
 
-    for item, price in cart_items:
-        text += f"• {item} — {price} TL\n"
+    for item in cart_items:
+        name = item["name"]
+        price = item["price"]
+
+        cart_text += f"• {name} — {price} TL\n"
         total += price
 
-    text += f"\n💰 Total: {total} TL"
-    text += f"\n📞 Phone: {phone_number}"
-    text += f"\n👤 User: @{message.from_user.username}"
+    username = message.from_user.username
 
-    await bot.send_message(ADMIN_ID, text)
+    if username:
+        username_text = f"@{username}"
+    else:
+        username_text = "No username"
 
-    user_cart[user_id] = []
+    order_text = f"""
+📦 NEW ORDER
 
+{cart_text}
+
+💰 Total: {total} TL
+📞 Phone: {phone}
+👤 User: {username_text}
+"""
+
+    # SEND ORDER TO OWNER
+    await bot.send_message(OWNER_ID, order_text)
+
+    # CLIENT RESPONSE
     await message.answer(
         "✅ Order sent successfully!\n\nVAMO Cafe will contact you soon.",
         reply_markup=get_main_menu()
     )
 
-# ---------- BACK ----------
+    # CLEAR CART
+    carts[user_id] = []
 
-@dp.message_handler(lambda message: message.text == "⬅ Back")
-async def back(message: types.Message):
-    await message.answer(
-        "⬅ Returned to main menu",
-        reply_markup=get_main_menu()
-    )
+# =========================
+# KEEP RENDER ALIVE
+# =========================
 
-# ---------- RUN ----------
+async def healthcheck(request):
+    return web.Response(text="Bot is running!")
+
+async def on_startup(dp):
+    app = web.Application()
+    app.router.add_get('/', healthcheck)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+
+    port = int(os.environ.get("PORT", 10000))
+
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
+    print(f"✅ Web server started on port {port}")
+
+# =========================
+# RUN
+# =========================
 
 if __name__ == "__main__":
-    print("VAMO Cafe Bot started")
-    executor.start_polling(dp, skip_updates=True)
+    executor.start_polling(
+        dp,
+        skip_updates=True,
+        on_startup=on_startup
+    )
