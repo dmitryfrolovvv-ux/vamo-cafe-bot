@@ -206,6 +206,43 @@ async def admin_orders(message: types.Message):
     await message.answer(text)
 
 # =========================
+# COMMAND /ORDERS
+# =========================
+
+@dp.message_handler(commands=["orders"])
+async def command_orders(message: types.Message):
+
+    if message.from_user.id != OWNER_ID:
+        return
+
+    cursor.execute("""
+    SELECT id, items, total, phone, address, created_at
+    FROM orders
+    ORDER BY id DESC
+    LIMIT 10
+    """)
+
+    orders = cursor.fetchall()
+
+    if not orders:
+        await message.answer("No orders yet.")
+        return
+
+    text = "📦 LAST ORDERS\n\n"
+
+    for order in orders:
+        text += (
+            f"#{order[0]}\n"
+            f"🛒 {order[1]}\n"
+            f"💰 {order[2]} TL\n"
+            f"📞 {order[3]}\n"
+            f"🏠 {order[4]}\n"
+            f"📅 {order[5]}\n\n"
+        )
+
+    await message.answer(text)
+
+# =========================
 # ADMIN STATS
 # =========================
 
