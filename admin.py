@@ -78,11 +78,12 @@ def register_admin(dp, conn, cur):
 
         await state.finish()
 
-        await message.answer(
-            "⬅ Back",
-            reply_markup=admin_menu()
-        )
+        from main import main_menu
 
+        await message.answer(
+        "🏠 Main menu",
+        reply_markup=main_menu()
+    )
     # =====================
     # ADD CATEGORY
     # =====================
