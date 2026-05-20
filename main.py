@@ -9,235 +9,204 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.types import ReplyKeyboardMarkup
 
-# =========================
+from aiogram.types import (
+    ReplyKeyboardMarkup,
+    KeyboardButton
+)
+
+# =====================================
 # CONFIG
-# =========================
+# =====================================
 
-BOT_TOKEN = "8729557900:AAGQceOGd-V5erYJpSXV5M95wrFU_JeMd4Q"
-ADMIN_ID = 5199302693
+TOKEN = "YOUR_BOT_TOKEN"
+ADMIN_ID = YOUR_TELEGRAM_ID
 
 DATABASE_URL = "postgresql://postgres.gtglvcebuvuampyhtaze:froLOV580530.@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
 logging.basicConfig(level=logging.INFO)
 
-# =========================
+# =====================================
 # FLASK
-# =========================
+# =====================================
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Bot is alive"
+    return "Bot is running!"
 
 def run_web():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# =========================
+# =====================================
 # BOT
-# =========================
+# =====================================
 
-bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
+
+bot = Bot(token=TOKEN)
 dp = Dispatcher(bot, storage=storage)
 
-# =========================
-# CARTS
-# =========================
+# =====================================
+# DATABASE
+# =====================================
+
+conn = psycopg2.connect(
+    DATABASE_URL,
+    sslmode="require"
+)
+
+cur = conn.cursor()
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT,
+    username TEXT,
+    full_name TEXT,
+    product_name TEXT,
+    total INTEGER
+)
+""")
+
+conn.commit()
+
+# =====================================
+# DATA
+# =====================================
+
+menu_data = {
+    "🌭 Hot Dogs": [
+        ("Classic Hot Dog", 150),
+        ("Cheese Hot Dog", 180),
+        ("Double Hot Dog", 220)
+    ],
+
+    "🌯 Shawarma": [
+        ("Chicken Shawarma", 220),
+        ("Big Shawarma", 260)
+    ],
+
+    "🥤 Drinks": [
+        ("Cola", 60),
+        ("Ayran", 50)
+    ]
+}
 
 user_carts = {}
 
-# =========================
-# DATABASE
-# =========================
-
-conn = psycopg2.connect(DATABASE_URL, sslmode="require")
-cur = conn.cursor()
-
-def create_tables():
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS categories (
-        id SERIAL PRIMARY KEY,
-        name TEXT UNIQUE
-    )
-    """)
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS products (
-        id SERIAL PRIMARY KEY,
-        category TEXT,
-        name TEXT,
-        price INTEGER
-    )
-    """)
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS orders (
-        id SERIAL PRIMARY KEY,
-        user_id BIGINT,
-        username TEXT,
-        full_name TEXT,
-        product_name TEXT,
-        total INTEGER
-    )
-    """)
-
-    conn.commit()
-
-create_tables()
-
-# =========================
-# DEFAULT CATEGORIES
-# =========================
-
-def create_default_categories():
-    categories = [
-        "🌭 Hot Dogs",
-        "🌯 Shawarma",
-        "🥤 Drinks"
-    ]
-
-    for cat in categories:
-        cur.execute("""
-        INSERT INTO categories (name)
-        VALUES (%s)
-        ON CONFLICT DO NOTHING
-        """, (cat,))
-
-    conn.commit()
-
-create_default_categories()
-
-# =========================
+# =====================================
 # STATES
-# =========================
+# =====================================
 
-class AdminStates(StatesGroup):
-    add_category = State()
+class AddProduct(StatesGroup):
+    category = State()
+    product_name = State()
+    product_price = State()
 
-    add_product_category = State()
-    add_product_name = State()
-    add_product_price = State()
+class DeleteCategory(StatesGroup):
+    waiting = State()
 
-# =========================
-# HELPERS
-# =========================
-
-def get_categories():
-    cur.execute("""
-    SELECT name
-    FROM categories
-    ORDER BY id
-    """)
-
-    rows = cur.fetchall()
-
-    return [r[0] for r in rows]
+# =====================================
+# KEYBOARDS
+# =====================================
 
 def main_menu():
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
-    categories = get_categories()
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
 
-    for cat in categories:
-        kb.add(cat)
+    for category in menu_data.keys():
+        kb.add(category)
 
     kb.add("🛒 Cart")
 
     return kb
 
-# =========================
-# START
-# =========================
+def category_products(category):
 
-@dp.message_handler(commands=["start"])
-async def start(message: types.Message):
-    await message.answer(
-        "🍴 Welcome to VAMO Cafe",
-        reply_markup=main_menu()
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
     )
 
-# =========================
-# SHOW PRODUCTS
-# =========================
-
-@dp.message_handler(lambda m: m.text in get_categories())
-async def show_products(message: types.Message):
-    category = message.text
-
-    cur.execute("""
-    SELECT id, name, price
-    FROM products
-    WHERE category=%s
-    """, (category,))
-
-    products = cur.fetchall()
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    text = f"{category}\n\n"
-
-    if not products:
-        text += "No products"
-
-    for p in products:
-        product_button = f"{p[1]} — {p[2]} TL"
-
-        kb.add(product_button)
-
-        text += f"• {product_button}\n"
+    for name, price in menu_data[category]:
+        kb.add(f"{name} — {price} TL")
 
     kb.add("⬅️ Back")
 
+    return kb
+
+# =====================================
+# START
+# =====================================
+
+@dp.message_handler(commands=["start"])
+async def start(message: types.Message):
+
     await message.answer(
-        text,
-        reply_markup=kb
+        "🍔 Welcome to VAMO Cafe",
+        reply_markup=main_menu()
     )
 
-# =========================
+# =====================================
+# SHOW CATEGORY
+# =====================================
+
+@dp.message_handler(lambda m: m.text in menu_data)
+async def show_category(message: types.Message):
+
+    category = message.text
+
+    text = f"{category}\n\n"
+
+    for name, price in menu_data[category]:
+        text += f"• {name} — {price} TL\n"
+
+    await message.answer(
+        text,
+        reply_markup=category_products(category)
+    )
+
+# =====================================
 # ADD TO CART
-# =========================
+# =====================================
 
 @dp.message_handler(lambda m: "—" in m.text and "TL" in m.text)
 async def add_to_cart(message: types.Message):
+
     user_id = message.from_user.id
 
     if user_id not in user_carts:
         user_carts[user_id] = []
 
-    product = message.text
-
-    user_carts[user_id].append(product)
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    kb.add("✅ Checkout")
-    kb.add("🗑 Clear Cart")
-    kb.add("⬅️ Back")
+    user_carts[user_id].append(message.text)
 
     await message.answer(
-        f"✅ Added to cart:\n{product}",
-        reply_markup=kb
+        f"✅ Added to cart:\n{message.text}",
+        reply_markup=main_menu()
     )
 
-# =========================
+# =====================================
 # CART
-# =========================
+# =====================================
 
 @dp.message_handler(lambda m: m.text == "🛒 Cart")
 async def cart(message: types.Message):
+
     user_id = message.from_user.id
 
     cart_items = user_carts.get(user_id, [])
 
     if not cart_items:
+
         await message.answer(
             "🛒 Cart is empty",
             reply_markup=main_menu()
         )
+
         return
 
     text = "🛒 YOUR CART\n\n"
@@ -245,20 +214,28 @@ async def cart(message: types.Message):
     total = 0
 
     for item in cart_items:
+
         text += f"• {item}\n"
 
         try:
-            price = int(item.split("—")[1].replace("TL", "").strip())
+            price = int(
+                item.split("—")[1]
+                .replace("TL", "")
+                .strip()
+            )
+
             total += price
+
         except:
             pass
 
     text += f"\n💰 Total: {total} TL"
 
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
 
     kb.add("✅ Checkout")
-    kb.add("🗑 Clear Cart")
     kb.add("⬅️ Back")
 
     await message.answer(
@@ -266,45 +243,43 @@ async def cart(message: types.Message):
         reply_markup=kb
     )
 
-# =========================
-# CLEAR CART
-# =========================
-
-@dp.message_handler(lambda m: m.text == "🗑 Clear Cart")
-async def clear_cart(message: types.Message):
-    user_id = message.from_user.id
-
-    user_carts[user_id] = []
-
-    await message.answer(
-        "🗑 Cart cleared",
-        reply_markup=main_menu()
-    )
-
-# =========================
+# =====================================
 # CHECKOUT
-# =========================
+# =====================================
 
 @dp.message_handler(lambda m: m.text == "✅ Checkout")
 async def checkout(message: types.Message):
+
     user_id = message.from_user.id
 
     cart_items = user_carts.get(user_id, [])
 
     if not cart_items:
-        await message.answer("🛒 Cart is empty")
+
+        await message.answer(
+            "🛒 Cart is empty",
+            reply_markup=main_menu()
+        )
+
         return
 
     total = 0
 
     for item in cart_items:
+
         try:
-            price = int(item.split("—")[1].replace("TL", "").strip())
+            price = int(
+                item.split("—")[1]
+                .replace("TL", "")
+                .strip()
+            )
+
             total += price
+
         except:
             pass
 
-    products_text = ", ".join(cart_items)
+    products_text = "\n".join(cart_items)
 
     cur.execute("""
     INSERT INTO orders (
@@ -314,7 +289,7 @@ async def checkout(message: types.Message):
         product_name,
         total
     )
-    VALUES (%s, %s, %s, %s, %s)
+    VALUES (%s,%s,%s,%s,%s)
     """, (
         message.from_user.id,
         message.from_user.username,
@@ -328,7 +303,16 @@ async def checkout(message: types.Message):
     user_carts[user_id] = []
 
     await message.answer(
-        "✅ Order placed successfully!",
+        f"""
+✅ ORDER CONFIRMED
+
+📦 Products:
+{products_text}
+
+💰 Total: {total} TL
+
+VAMO Cafe will contact you soon.
+""",
         reply_markup=main_menu()
     )
 
@@ -337,30 +321,37 @@ async def checkout(message: types.Message):
         f"""
 🔥 NEW ORDER
 
-👤 {message.from_user.full_name}
-📦 {products_text}
+👤 Client: {message.from_user.full_name}
+🆔 ID: {message.from_user.id}
+
+📦 Order:
+{products_text}
 
 💰 Total: {total} TL
 """
     )
 
-# =========================
+# =====================================
 # ADMIN PANEL
-# =========================
+# =====================================
 
 @dp.message_handler(commands=["admin"])
+@dp.message_handler(lambda m: m.text.lower() in ["admins", "/admins"])
 async def admin_panel(message: types.Message):
+
     if message.from_user.id != ADMIN_ID:
         return
 
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
 
     kb.add("📦 Orders")
     kb.add("📊 Statistics")
 
     kb.add("📂 Categories")
-
     kb.add("➕ Add Product")
+
     kb.add("❌ Delete Category")
 
     kb.add("⬅️ Back")
@@ -370,118 +361,135 @@ async def admin_panel(message: types.Message):
         reply_markup=kb
     )
 
-# =========================
-# ADD CATEGORY
-# =========================
+# =====================================
+# ORDERS
+# =====================================
 
-@dp.message_handler(lambda m: m.text == "📂 Categories")
-async def categories_menu(message: types.Message):
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+@dp.message_handler(lambda m: m.text == "📦 Orders")
+async def orders(message: types.Message):
 
-    kb.add("➕ Add Category")
-    kb.add("⬅️ Back")
-
-    await message.answer(
-        "📂 Categories",
-        reply_markup=kb
-    )
-
-@dp.message_handler(lambda m: m.text == "➕ Add Category")
-async def add_category_start(message: types.Message):
-    await AdminStates.add_category.set()
-
-    await message.answer(
-        "📂 Enter category name"
-    )
-
-@dp.message_handler(state=AdminStates.add_category)
-async def add_category_finish(message: types.Message, state: FSMContext):
-    category = message.text
-
-    cur.execute("""
-    INSERT INTO categories (name)
-    VALUES (%s)
-    ON CONFLICT DO NOTHING
-    """, (category,))
-
-    conn.commit()
-
-    await message.answer(
-        "✅ Category added",
-        reply_markup=main_menu()
-    )
-
-    await state.finish()
-
-# =========================
-# DELETE CATEGORY
-# =========================
-
-@dp.message_handler(lambda m: m.text == "❌ Delete Category")
-async def delete_category(message: types.Message):
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    categories = get_categories()
-
-    for cat in categories:
-        kb.add(cat)
-
-    kb.add("⬅️ Back")
-
-    await message.answer(
-        "❌ Select category to delete",
-        reply_markup=kb
-    )
-
-@dp.message_handler(lambda m: m.text in get_categories())
-async def delete_category_confirm(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
 
-# =========================
-# ADD PRODUCT
-# =========================
+    cur.execute("""
+    SELECT full_name, total
+    FROM orders
+    ORDER BY id DESC
+    LIMIT 10
+    """)
 
-@dp.message_handler(lambda m: m.text == "➕ Add Product")
-async def add_product_start(message: types.Message):
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    rows = cur.fetchall()
 
-    categories = get_categories()
+    if not rows:
 
-    for cat in categories:
-        kb.add(cat)
+        await message.answer(
+            "No orders"
+        )
 
-    kb.add("⬅️ Back")
+        return
 
-    await AdminStates.add_product_category.set()
+    text = "📦 LAST ORDERS\n\n"
+
+    for i, row in enumerate(rows, start=1):
+
+        text += f"#{i} | {row[0]} | {row[1]} TL\n"
+
+    await message.answer(text)
+
+# =====================================
+# STATISTICS
+# =====================================
+
+@dp.message_handler(lambda m: m.text == "📊 Statistics")
+async def statistics(message: types.Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    cur.execute("""
+    SELECT COUNT(*), COALESCE(SUM(total),0)
+    FROM orders
+    """)
+
+    data = cur.fetchone()
 
     await message.answer(
-        "📂 Select category",
-        reply_markup=kb
+        f"""
+📊 Statistics
+
+📦 Orders: {data[0]}
+💰 Income: {data[1]} TL
+"""
     )
 
-@dp.message_handler(state=AdminStates.add_product_category)
-async def add_product_category(message: types.Message, state: FSMContext):
-    await state.update_data(category=message.text)
+# =====================================
+# CATEGORIES
+# =====================================
 
-    await AdminStates.add_product_name.set()
+@dp.message_handler(lambda m: m.text == "📂 Categories")
+async def categories(message: types.Message):
+
+    text = "📂 Categories:\n\n"
+
+    for category in menu_data.keys():
+        text += f"• {category}\n"
+
+    await message.answer(text)
+
+# =====================================
+# ADD PRODUCT
+# =====================================
+
+@dp.message_handler(lambda m: m.text == "➕ Add Product")
+async def add_product(message: types.Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    text = "📂 Choose category:\n\n"
+
+    for category in menu_data.keys():
+        text += f"• {category}\n"
+
+    await message.answer(text)
+
+    await AddProduct.category.set()
+
+@dp.message_handler(state=AddProduct.category)
+async def add_category(message: types.Message, state: FSMContext):
+
+    category = message.text
+
+    if category not in menu_data:
+
+        await message.answer(
+            "❌ Category not found"
+        )
+
+        return
+
+    await state.update_data(category=category)
 
     await message.answer(
         "🍔 Enter product name"
     )
 
-@dp.message_handler(state=AdminStates.add_product_name)
-async def add_product_name(message: types.Message, state: FSMContext):
-    await state.update_data(name=message.text)
+    await AddProduct.product_name.set()
 
-    await AdminStates.add_product_price.set()
+@dp.message_handler(state=AddProduct.product_name)
+async def add_name(message: types.Message, state: FSMContext):
+
+    await state.update_data(name=message.text)
 
     await message.answer(
         "💰 Enter price"
     )
 
-@dp.message_handler(state=AdminStates.add_product_price)
-async def add_product_price(message: types.Message, state: FSMContext):
+    await AddProduct.product_price.set()
+
+@dp.message_handler(state=AddProduct.product_price)
+async def add_price(message: types.Message, state: FSMContext):
+
     data = await state.get_data()
 
     category = data["category"]
@@ -489,16 +497,18 @@ async def add_product_price(message: types.Message, state: FSMContext):
 
     try:
         price = int(message.text)
+
     except:
-        await message.answer("Enter number")
+
+        await message.answer(
+            "❌ Enter only number"
+        )
+
         return
 
-    cur.execute("""
-    INSERT INTO products (category, name, price)
-    VALUES (%s, %s, %s)
-    """, (category, name, price))
-
-    conn.commit()
+    menu_data[category].append(
+        (name, price)
+    )
 
     await message.answer(
         "✅ Product added",
@@ -507,58 +517,54 @@ async def add_product_price(message: types.Message, state: FSMContext):
 
     await state.finish()
 
-# =========================
-# ORDERS
-# =========================
+# =====================================
+# DELETE CATEGORY
+# =====================================
 
-@dp.message_handler(lambda m: m.text == "📦 Orders")
-async def orders(message: types.Message):
-    cur.execute("""
-    SELECT id, full_name, total
-    FROM orders
-    ORDER BY id DESC
-    LIMIT 10
-    """)
+@dp.message_handler(lambda m: m.text == "❌ Delete Category")
+async def delete_category(message: types.Message):
 
-    rows = cur.fetchall()
+    if message.from_user.id != ADMIN_ID:
+        return
 
-    text = "📦 LAST ORDERS\n\n"
+    text = "❌ Enter category name:\n\n"
 
-    if not rows:
-        text += "No orders"
-
-    for r in rows:
-        text += f"#{r[0]} | {r[1]} | {r[2]} TL\n"
+    for category in menu_data.keys():
+        text += f"• {category}\n"
 
     await message.answer(text)
 
-# =========================
-# STATS
-# =========================
+    await DeleteCategory.waiting.set()
 
-@dp.message_handler(lambda m: m.text == "📊 Statistics")
-async def stats(message: types.Message):
-    cur.execute("SELECT COUNT(*) FROM orders")
-    total_orders = cur.fetchone()[0]
+@dp.message_handler(state=DeleteCategory.waiting)
+async def delete_category_confirm(message: types.Message, state: FSMContext):
 
-    cur.execute("SELECT COALESCE(SUM(total),0) FROM orders")
-    income = cur.fetchone()[0]
+    category = message.text
 
-    text = f"""
-📊 Statistics
+    if category in menu_data:
 
-📦 Orders: {total_orders}
-💰 Income: {income} TL
-"""
+        del menu_data[category]
 
-    await message.answer(text)
+        await message.answer(
+            "✅ Category deleted",
+            reply_markup=main_menu()
+        )
 
-# =========================
+    else:
+
+        await message.answer(
+            "❌ Category not found"
+        )
+
+    await state.finish()
+
+# =====================================
 # BACK
-# =========================
+# =====================================
 
 @dp.message_handler(lambda m: m.text == "⬅️ Back")
 async def back(message: types.Message, state: FSMContext):
+
     await state.finish()
 
     await message.answer(
@@ -566,18 +572,15 @@ async def back(message: types.Message, state: FSMContext):
         reply_markup=main_menu()
     )
 
-# =========================
-# MAIN
-# =========================
-
-async def on_startup(dp):
-    print("Bot started")
+# =====================================
+# RUN
+# =====================================
 
 if __name__ == "__main__":
+
     Thread(target=run_web).start()
 
     executor.start_polling(
         dp,
-        skip_updates=True,
-        on_startup=on_startup
+        skip_updates=True
     )
