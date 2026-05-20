@@ -5,6 +5,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 ADMIN_ID = 1472777680
 
+
 # =========================
 # STATES
 # =========================
@@ -18,6 +19,7 @@ class AdminStates(StatesGroup):
     add_product_name = State()
 
     add_product_price = State()
+
 
 # =========================
 # ADMIN MENU
@@ -43,11 +45,12 @@ def admin_menu():
 
     return kb
 
+
 # =========================
 # REGISTER
 # =========================
 
-def register_admin(dp, conn, cur):
+def register_admin(dp, conn, cur, main_menu):
 
     # =====================
     # ADMIN PANEL
@@ -78,12 +81,11 @@ def register_admin(dp, conn, cur):
 
         await state.finish()
 
-        from main import main_menu
-
         await message.answer(
-        "🏠 Main menu",
-        reply_markup=main_menu()
-    )
+            "🏠 Main menu",
+            reply_markup=main_menu()
+        )
+
     # =====================
     # ADD CATEGORY
     # =====================
@@ -96,12 +98,32 @@ def register_admin(dp, conn, cur):
 
         await state.finish()
 
-        await message.answer("🗂 Enter category name")
+        await message.answer(
+            "🗂 Enter category name"
+        )
 
         await AdminStates.add_category.set()
 
     @dp.message_handler(state=AdminStates.add_category)
     async def add_category_finish(message: types.Message, state: FSMContext):
+
+        forbidden = [
+            "⬅ Back",
+            "📦 Orders",
+            "📊 Stats",
+            "➕ Add category",
+            "❌ Delete category",
+            "➕ Add product",
+            "❌ Delete product"
+        ]
+
+        if message.text in forbidden:
+
+            await message.answer(
+                "❌ Enter category name manually"
+            )
+
+            return
 
         try:
 
@@ -247,6 +269,23 @@ def register_admin(dp, conn, cur):
     @dp.message_handler(state=AdminStates.add_product_category)
     async def add_product_category(message: types.Message, state: FSMContext):
 
+        forbidden = [
+            "📦 Orders",
+            "📊 Stats",
+            "➕ Add category",
+            "❌ Delete category",
+            "➕ Add product",
+            "❌ Delete product"
+        ]
+
+        if message.text in forbidden:
+
+            await message.answer(
+                "❌ Select category only"
+            )
+
+            return
+
         await state.update_data(
             category=message.text
         )
@@ -260,6 +299,24 @@ def register_admin(dp, conn, cur):
     @dp.message_handler(state=AdminStates.add_product_name)
     async def add_product_name(message: types.Message, state: FSMContext):
 
+        forbidden = [
+            "⬅ Back",
+            "📦 Orders",
+            "📊 Stats",
+            "➕ Add category",
+            "❌ Delete category",
+            "➕ Add product",
+            "❌ Delete product"
+        ]
+
+        if message.text in forbidden:
+
+            await message.answer(
+                "❌ Enter product name manually"
+            )
+
+            return
+
         await state.update_data(
             name=message.text
         )
@@ -272,6 +329,14 @@ def register_admin(dp, conn, cur):
 
     @dp.message_handler(state=AdminStates.add_product_price)
     async def add_product_price(message: types.Message, state: FSMContext):
+
+        if not message.text.isdigit():
+
+            await message.answer(
+                "❌ Enter only number"
+            )
+
+            return
 
         try:
 
