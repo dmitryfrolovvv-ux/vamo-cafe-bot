@@ -398,12 +398,12 @@ async def finish_order(message: types.Message, state: FSMContext):
 
         username = message.from_user.username
 
-if username:
-    mention = f"@{username}"
-else:
-    mention = message.from_user.full_name
+        if username:
+            mention = f"@{username}"
+        else:
+            mention = message.from_user.full_name
 
-text = f"🚨 NEW ORDER {mention}\n\n"
+        text = f"🚨 NEW ORDER {mention}\n\n"
 
         total = 0
 
