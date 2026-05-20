@@ -15,7 +15,7 @@ from aiogram.types import ReplyKeyboardMarkup
 # CONFIG
 # =========================
 
-BOT_TOKEN = "8729557900:AAGQceOGd-V5erYJpSXV5M95wrFU_JeMd4Q"
+BOT_TOKEN = "YOUR_BOT_TOKEN"
 ADMIN_ID = 5199302693
 
 DATABASE_URL = "postgresql://postgres.gtglvcebuvuampyhtaze:froLOV580530.@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
@@ -43,6 +43,12 @@ def run_web():
 bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
+
+# =========================
+# CARTS
+# =========================
+
+user_carts = {}
 
 # =========================
 # DATABASE
@@ -111,7 +117,6 @@ create_default_categories()
 
 class AdminStates(StatesGroup):
     add_category = State()
-    delete_category = State()
 
     add_product_category = State()
     add_product_name = State()
@@ -193,6 +198,153 @@ async def show_products(message: types.Message):
     )
 
 # =========================
+# ADD TO CART
+# =========================
+
+@dp.message_handler(lambda m: "—" in m.text and "TL" in m.text)
+async def add_to_cart(message: types.Message):
+    user_id = message.from_user.id
+
+    if user_id not in user_carts:
+        user_carts[user_id] = []
+
+    product = message.text
+
+    user_carts[user_id].append(product)
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    kb.add("✅ Checkout")
+    kb.add("🗑 Clear Cart")
+    kb.add("⬅️ Back")
+
+    await message.answer(
+        f"✅ Added to cart:\n{product}",
+        reply_markup=kb
+    )
+
+# =========================
+# CART
+# =========================
+
+@dp.message_handler(lambda m: m.text == "🛒 Cart")
+async def cart(message: types.Message):
+    user_id = message.from_user.id
+
+    cart_items = user_carts.get(user_id, [])
+
+    if not cart_items:
+        await message.answer(
+            "🛒 Cart is empty",
+            reply_markup=main_menu()
+        )
+        return
+
+    text = "🛒 YOUR CART\n\n"
+
+    total = 0
+
+    for item in cart_items:
+        text += f"• {item}\n"
+
+        try:
+            price = int(item.split("—")[1].replace("TL", "").strip())
+            total += price
+        except:
+            pass
+
+    text += f"\n💰 Total: {total} TL"
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    kb.add("✅ Checkout")
+    kb.add("🗑 Clear Cart")
+    kb.add("⬅️ Back")
+
+    await message.answer(
+        text,
+        reply_markup=kb
+    )
+
+# =========================
+# CLEAR CART
+# =========================
+
+@dp.message_handler(lambda m: m.text == "🗑 Clear Cart")
+async def clear_cart(message: types.Message):
+    user_id = message.from_user.id
+
+    user_carts[user_id] = []
+
+    await message.answer(
+        "🗑 Cart cleared",
+        reply_markup=main_menu()
+    )
+
+# =========================
+# CHECKOUT
+# =========================
+
+@dp.message_handler(lambda m: m.text == "✅ Checkout")
+async def checkout(message: types.Message):
+    user_id = message.from_user.id
+
+    cart_items = user_carts.get(user_id, [])
+
+    if not cart_items:
+        await message.answer("🛒 Cart is empty")
+        return
+
+    total = 0
+
+    for item in cart_items:
+        try:
+            price = int(item.split("—")[1].replace("TL", "").strip())
+            total += price
+        except:
+            pass
+
+    products_text = ", ".join(cart_items)
+
+    cur.execute("""
+    INSERT INTO orders (
+        user_id,
+        username,
+        full_name,
+        product_name,
+        total
+    )
+    VALUES (%s, %s, %s, %s, %s)
+    """, (
+        message.from_user.id,
+        message.from_user.username,
+        message.from_user.full_name,
+        products_text,
+        total
+    ))
+
+    conn.commit()
+
+    user_carts[user_id] = []
+
+    await message.answer(
+        "✅ Order placed successfully!",
+        reply_markup=main_menu()
+    )
+
+    await bot.send_message(
+        ADMIN_ID,
+        f"""
+🔥 NEW ORDER
+
+👤 {message.from_user.full_name}
+📦 {products_text}
+
+💰 Total: {total} TL
+"""
+    )
+
+# =========================
 # ADMIN PANEL
 # =========================
 
@@ -209,7 +361,7 @@ async def admin_panel(message: types.Message):
     kb.add("📂 Categories")
 
     kb.add("➕ Add Product")
-    kb.add("❌ Delete Product")
+    kb.add("❌ Delete Category")
 
     kb.add("⬅️ Back")
 
@@ -219,7 +371,7 @@ async def admin_panel(message: types.Message):
     )
 
 # =========================
-# CATEGORIES PANEL
+# ADD CATEGORY
 # =========================
 
 @dp.message_handler(lambda m: m.text == "📂 Categories")
@@ -227,34 +379,12 @@ async def categories_menu(message: types.Message):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
     kb.add("➕ Add Category")
-    kb.add("❌ Delete Category")
-    kb.add("📋 Show Categories")
-
     kb.add("⬅️ Back")
 
     await message.answer(
         "📂 Categories",
         reply_markup=kb
     )
-
-# =========================
-# SHOW CATEGORIES
-# =========================
-
-@dp.message_handler(lambda m: m.text == "📋 Show Categories")
-async def show_categories(message: types.Message):
-    categories = get_categories()
-
-    text = "📂 Categories:\n\n"
-
-    for cat in categories:
-        text += f"• {cat}\n"
-
-    await message.answer(text)
-
-# =========================
-# ADD CATEGORY
-# =========================
 
 @dp.message_handler(lambda m: m.text == "➕ Add Category")
 async def add_category_start(message: types.Message):
@@ -288,7 +418,7 @@ async def add_category_finish(message: types.Message, state: FSMContext):
 # =========================
 
 @dp.message_handler(lambda m: m.text == "❌ Delete Category")
-async def delete_category_start(message: types.Message):
+async def delete_category(message: types.Message):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
     categories = get_categories()
@@ -298,35 +428,15 @@ async def delete_category_start(message: types.Message):
 
     kb.add("⬅️ Back")
 
-    await AdminStates.delete_category.set()
-
     await message.answer(
-        "❌ Select category",
+        "❌ Select category to delete",
         reply_markup=kb
     )
 
-@dp.message_handler(state=AdminStates.delete_category)
-async def delete_category_finish(message: types.Message, state: FSMContext):
-    category = message.text
-
-    cur.execute("""
-    DELETE FROM categories
-    WHERE name=%s
-    """, (category,))
-
-    cur.execute("""
-    DELETE FROM products
-    WHERE category=%s
-    """, (category,))
-
-    conn.commit()
-
-    await message.answer(
-        "✅ Category deleted",
-        reply_markup=main_menu()
-    )
-
-    await state.finish()
+@dp.message_handler(lambda m: m.text in get_categories())
+async def delete_category_confirm(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
 
 # =========================
 # ADD PRODUCT
@@ -350,10 +460,6 @@ async def add_product_start(message: types.Message):
         reply_markup=kb
     )
 
-# =========================
-# PRODUCT CATEGORY
-# =========================
-
 @dp.message_handler(state=AdminStates.add_product_category)
 async def add_product_category(message: types.Message, state: FSMContext):
     await state.update_data(category=message.text)
@@ -364,10 +470,6 @@ async def add_product_category(message: types.Message, state: FSMContext):
         "🍔 Enter product name"
     )
 
-# =========================
-# PRODUCT NAME
-# =========================
-
 @dp.message_handler(state=AdminStates.add_product_name)
 async def add_product_name(message: types.Message, state: FSMContext):
     await state.update_data(name=message.text)
@@ -377,10 +479,6 @@ async def add_product_name(message: types.Message, state: FSMContext):
     await message.answer(
         "💰 Enter price"
     )
-
-# =========================
-# PRODUCT PRICE
-# =========================
 
 @dp.message_handler(state=AdminStates.add_product_price)
 async def add_product_price(message: types.Message, state: FSMContext):
@@ -408,28 +506,6 @@ async def add_product_price(message: types.Message, state: FSMContext):
     )
 
     await state.finish()
-
-# =========================
-# DELETE PRODUCT
-# =========================
-
-@dp.message_handler(lambda m: m.text == "❌ Delete Product")
-async def delete_product(message: types.Message):
-    cur.execute("""
-    SELECT id, name, price
-    FROM products
-    ORDER BY id DESC
-    LIMIT 20
-    """)
-
-    products = cur.fetchall()
-
-    text = "❌ Products\n\n"
-
-    for p in products:
-        text += f"{p[0]}. {p[1]} — {p[2]} TL\n"
-
-    await message.answer(text)
 
 # =========================
 # ORDERS
