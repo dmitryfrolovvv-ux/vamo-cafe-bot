@@ -1,5 +1,6 @@
 import logging
 import os
+import sqlite3
 
 from flask import Flask
 from threading import Thread
@@ -41,6 +42,37 @@ def keep_alive():
     t.start()
 
 keep_alive()
+
+# =========================
+# DATABASE
+# =========================
+
+conn = sqlite3.connect("vamo.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_id INTEGER,
+    username TEXT,
+    full_name TEXT,
+    phone TEXT
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_id INTEGER,
+    items TEXT,
+    total INTEGER,
+    phone TEXT,
+    address TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+""")
+
+conn.commit()
 
 # =========================
 # DATA
@@ -503,6 +535,49 @@ async def get_door_code(message: types.Message):
         order_text
     )
 
+    # SAVE USER
+
+    cursor.execute("""
+    INSERT INTO users (
+        telegram_id,
+        username,
+        full_name,
+        phone
+    )
+    VALUES (?, ?, ?, ?)
+    """, (
+        message.from_user.id,
+        message.from_user.username,
+        message.from_user.full_name,
+        user_data[user_id]["phone"]
+    ))
+
+    # SAVE ORDER
+
+    items_text = ""
+
+    for item in cart:
+        items_text += f"{item['name']} ({item['price']} TL), "
+
+    cursor.execute("""
+    INSERT INTO orders (
+        telegram_id,
+        items,
+        total,
+        phone,
+        address
+    )
+    VALUES (?, ?, ?, ?, ?)
+    """, (
+        message.from_user.id,
+        items_text,
+        total,
+        user_data[user_id]["phone"],
+        user_data[user_id]["address"]
+    ))
+
+    conn.commit()
+
     await message.answer(
         "✅ Order sent successfully!\n\n"
         "VAMO Cafe will contact you soon.",
@@ -511,6 +586,43 @@ async def get_door_code(message: types.Message):
 
     carts[user_id] = []
     user_states[user_id] = None
+
+# =========================
+# ADMIN ORDERS
+# =========================
+
+@dp.message_handler(commands=["orders"])
+async def show_orders(message: types.Message):
+
+    if message.from_user.id != OWNER_ID:
+        return
+
+    cursor.execute("""
+    SELECT id, items, total, phone, address, created_at
+    FROM orders
+    ORDER BY id DESC
+    LIMIT 10
+    """)
+
+    orders = cursor.fetchall()
+
+    if not orders:
+        await message.answer("No orders yet.")
+        return
+
+    text = "📦 LAST ORDERS\n\n"
+
+    for order in orders:
+        text += (
+            f"#{order[0]}\n"
+            f"🛒 {order[1]}\n"
+            f"💰 {order[2]} TL\n"
+            f"📞 {order[3]}\n"
+            f"🏠 {order[4]}\n"
+            f"📅 {order[5]}\n\n"
+        )
+
+    await message.answer(text)
 
 # =========================
 # RUN
