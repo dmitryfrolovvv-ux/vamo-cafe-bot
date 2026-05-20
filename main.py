@@ -1,6 +1,9 @@
 import logging
 import os
 
+from flask import Flask
+from threading import Thread
+
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import (
     ReplyKeyboardMarkup,
@@ -12,13 +15,32 @@ from aiogram.types import (
 # CONFIG
 # =========================
 
-API_TOKEN = os.getenv("BOT_TOKEN")
+API_TOKEN = "8729557900:AAGQceOGd-V5erYJpSXV5M95wrFU_JeMd4Q"
 OWNER_ID = 1472777680
 
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
+
+# =========================
+# RENDER PORT FIX
+# =========================
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "VAMO BOT IS RUNNING"
+
+def run():
+    app.run(host='0.0.0.0', port=10000)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+keep_alive()
 
 # =========================
 # DATA
@@ -304,69 +326,24 @@ async def checkout(message: types.Message):
 
     user_states[user_id] = "waiting_phone"
 
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    contact_btn = KeyboardButton(
-        "📞 Send phone number",
-        request_contact=True
-    )
-
-    keyboard.add(contact_btn)
-
     await message.answer(
         "📞 Send your phone number:\n\n"
         "Example:\n"
         "+905551112233",
-        reply_markup=keyboard
+        reply_markup=ReplyKeyboardRemove()
     )
 
 # =========================
 # PHONE
 # =========================
 
-@dp.message_handler(content_types=types.ContentType.CONTACT)
-async def get_contact(message: types.Message):
-
-    user_id = message.from_user.id
-
-    if user_states.get(user_id) != "waiting_phone":
-        return
-
-    phone = message.contact.phone_number
-
-    user_data[user_id] = {
-        "phone": phone
-    }
-
-    user_states[user_id] = "waiting_location"
-
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    location_btn = KeyboardButton(
-        "📍 Send Location",
-        request_location=True
-    )
-
-    keyboard.add(location_btn)
-
-    await message.answer(
-        "📍 Please send your location.",
-        reply_markup=keyboard
-    )
-
-# =========================
-# MANUAL PHONE
-# =========================
-
 @dp.message_handler(lambda message: user_states.get(message.from_user.id) == "waiting_phone")
-async def manual_phone(message: types.Message):
+async def get_phone(message: types.Message):
 
     user_id = message.from_user.id
 
-    phone = message.text
-
     user_data[user_id] = {
-        "phone": phone
+        "phone": message.text
     }
 
     user_states[user_id] = "waiting_location"
@@ -458,7 +435,7 @@ async def get_complex_code(message: types.Message):
     )
 
 # =========================
-# DOOR CODE + SEND ORDER
+# DOOR CODE
 # =========================
 
 @dp.message_handler(lambda message: user_states.get(message.from_user.id) == "waiting_door_code")
