@@ -8,6 +8,10 @@ from aiogram.types import (
     ReplyKeyboardRemove
 )
 
+# =========================
+# CONFIG
+# =========================
+
 API_TOKEN = os.getenv("BOT_TOKEN")
 OWNER_ID = 1472777680
 
@@ -77,10 +81,11 @@ def main_keyboard():
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
 
-    carts[message.from_user.id] = []
+    if message.from_user.id not in carts:
+        carts[message.from_user.id] = []
 
     await message.answer(
-        "✅ Language selected!\n\nChoose category:",
+        "👋 Welcome to VAMO Cafe!\n\nChoose category:",
         reply_markup=main_keyboard()
     )
 
@@ -97,52 +102,130 @@ async def change_language(message: types.Message):
     )
 
 # =========================
-# CATEGORY
+# HOT DOGS
 # =========================
 
-@dp.message_handler(lambda message: message.text in menu.keys())
-async def category_handler(message: types.Message):
-
-    category = message.text
-
-    text = f"{category} Menu\n\n"
-
-    items = menu[category]
-
-    for index, item in enumerate(items, start=1):
-        text += f"{index}. {item[0]} — {item[1]} TL\n"
-
-    text += "\nTap button again to add item."
+@dp.message_handler(lambda message: message.text == "🌭 Hot Dogs")
+async def hotdogs(message: types.Message):
 
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
 
-    keyboard.add(category)
+    keyboard.add("Classic Hot Dog")
+    keyboard.add("Cheese Hot Dog")
+    keyboard.add("Double Hot Dog")
     keyboard.add("⬅️ Back")
 
-    await message.answer(text, reply_markup=keyboard)
+    await message.answer(
+        "🌭 Hot Dogs Menu\n\n"
+        "Classic Hot Dog — 150 TL\n"
+        "Cheese Hot Dog — 180 TL\n"
+        "Double Hot Dog — 220 TL",
+        reply_markup=keyboard
+    )
 
 # =========================
-# ADD TO CART
+# SHAWARMA
 # =========================
 
-@dp.message_handler(lambda message: message.text in menu.keys())
-async def add_item(message: types.Message):
+@dp.message_handler(lambda message: message.text == "🌯 Shawarma")
+async def shawarma(message: types.Message):
+
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    keyboard.add("Chicken Shawarma")
+    keyboard.add("Beef Shawarma")
+    keyboard.add("Mega Shawarma")
+    keyboard.add("⬅️ Back")
+
+    await message.answer(
+        "🌯 Shawarma Menu\n\n"
+        "Chicken Shawarma — 200 TL\n"
+        "Beef Shawarma — 250 TL\n"
+        "Mega Shawarma — 320 TL",
+        reply_markup=keyboard
+    )
+
+# =========================
+# CHEBUREKI
+# =========================
+
+@dp.message_handler(lambda message: message.text == "🥟 Chebureki")
+async def chebureki(message: types.Message):
+
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    keyboard.add("Classic Chebureki")
+    keyboard.add("Cheese Chebureki")
+    keyboard.add("Meat Chebureki")
+    keyboard.add("⬅️ Back")
+
+    await message.answer(
+        "🥟 Chebureki Menu\n\n"
+        "Classic Chebureki — 140 TL\n"
+        "Cheese Chebureki — 160 TL\n"
+        "Meat Chebureki — 190 TL",
+        reply_markup=keyboard
+    )
+
+# =========================
+# DRINKS
+# =========================
+
+@dp.message_handler(lambda message: message.text == "🥤 Drinks")
+async def drinks(message: types.Message):
+
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    keyboard.add("Cola")
+    keyboard.add("Ayran")
+    keyboard.add("Water")
+    keyboard.add("⬅️ Back")
+
+    await message.answer(
+        "🥤 Drinks Menu\n\n"
+        "Cola — 60 TL\n"
+        "Ayran — 50 TL\n"
+        "Water — 30 TL",
+        reply_markup=keyboard
+    )
+
+# =========================
+# ADD PRODUCTS
+# =========================
+
+products = {
+    "Classic Hot Dog": 150,
+    "Cheese Hot Dog": 180,
+    "Double Hot Dog": 220,
+
+    "Chicken Shawarma": 200,
+    "Beef Shawarma": 250,
+    "Mega Shawarma": 320,
+
+    "Classic Chebureki": 140,
+    "Cheese Chebureki": 160,
+    "Meat Chebureki": 190,
+
+    "Cola": 60,
+    "Ayran": 50,
+    "Water": 30
+}
+
+@dp.message_handler(lambda message: message.text in products.keys())
+async def add_product(message: types.Message):
 
     user_id = message.from_user.id
-    category = message.text
-
-    item = menu[category][0]
 
     if user_id not in carts:
         carts[user_id] = []
 
     carts[user_id].append({
-        "name": item[0],
-        "price": item[1]
+        "name": message.text,
+        "price": products[message.text]
     })
 
     await message.answer(
-        f"✅ Added:\n{item[0]} — {item[1]} TL"
+        f"✅ Added to cart:\n{message.text} — {products[message.text]} TL"
     )
 
 # =========================
@@ -198,7 +281,8 @@ async def clear_cart(message: types.Message):
     carts[message.from_user.id] = []
 
     await message.answer(
-        "🗑 Cart cleared!"
+        "🗑 Cart cleared!",
+        reply_markup=main_keyboard()
     )
 
 # =========================
@@ -233,7 +317,7 @@ async def checkout(message: types.Message):
     )
 
 # =========================
-# PHONE CONTACT
+# PHONE
 # =========================
 
 @dp.message_handler(content_types=types.ContentType.CONTACT)
@@ -265,10 +349,6 @@ async def get_contact(message: types.Message):
         "📍 Please send your location.",
         reply_markup=keyboard
     )
-
-# =========================
-# MANUAL PHONE
-# =========================
 
 @dp.message_handler(lambda message: user_states.get(message.from_user.id) == "waiting_phone")
 async def manual_phone(message: types.Message):
@@ -318,9 +398,7 @@ async def get_location(message: types.Message):
     user_states[user_id] = "waiting_address"
 
     await message.answer(
-        "🏠 Enter delivery address:\n\n"
-        "Example:\n"
-        "Mahmutlar, A Block, Apartment 12",
+        "🏠 Enter delivery address:",
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -372,7 +450,7 @@ async def get_complex_code(message: types.Message):
     )
 
 # =========================
-# DOOR CODE
+# DOOR CODE + SEND ORDER
 # =========================
 
 @dp.message_handler(lambda message: user_states.get(message.from_user.id) == "waiting_door_code")
