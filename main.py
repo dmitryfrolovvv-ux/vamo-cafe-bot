@@ -336,7 +336,7 @@ async def cart(message: types.Message):
 # CHECKOUT
 # =========================================
 
-@dp.message_handler(lambda m: m.text == "✅ Checkout")
+@dp.message_handler(lambda m: "Checkout" in m.text)
 async def checkout(message: types.Message):
 
     user_id = message.from_user.id
@@ -475,8 +475,12 @@ async def universal(message: types.Message):
 
     user_id = message.from_user.id
 
-    text = message.text
+    text = message.text.strip()
 
+    # BLOCK CHECKOUT
+    if text == "✅ Checkout":
+        return
+        
     # =========================
     # BACK
     # =========================
