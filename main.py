@@ -1,6 +1,7 @@
 import logging
 import sqlite3
 from threading import Thread
+from time import sleep
 
 from flask import Flask
 
@@ -172,45 +173,9 @@ async def admin_panel(message: types.Message):
 # ADMIN ORDERS
 # =========================
 
+@dp.message_handler(commands=["orders"])
 @dp.message_handler(lambda message: message.text == "📦 Orders")
 async def admin_orders(message: types.Message):
-
-    if message.from_user.id != OWNER_ID:
-        return
-
-    cursor.execute("""
-    SELECT id, items, total, phone, address, created_at
-    FROM orders
-    ORDER BY id DESC
-    LIMIT 10
-    """)
-
-    orders = cursor.fetchall()
-
-    if not orders:
-        await message.answer("No orders yet.")
-        return
-
-    text = "📦 LAST ORDERS\n\n"
-
-    for order in orders:
-        text += (
-            f"#{order[0]}\n"
-            f"🛒 {order[1]}\n"
-            f"💰 {order[2]} TL\n"
-            f"📞 {order[3]}\n"
-            f"🏠 {order[4]}\n"
-            f"📅 {order[5]}\n\n"
-        )
-
-    await message.answer(text)
-
-# =========================
-# COMMAND /ORDERS
-# =========================
-
-@dp.message_handler(commands=["orders"])
-async def command_orders(message: types.Message):
 
     if message.from_user.id != OWNER_ID:
         return
@@ -862,4 +827,16 @@ async def get_door_code(message: types.Message):
 # =========================
 
 if __name__ == "__main__":
-    executor.start_polling(dp, skip_updates=True)
+
+    while True:
+        try:
+            print("BOT STARTED")
+
+            executor.start_polling(
+                dp,
+                skip_updates=True
+            )
+
+        except Exception as e:
+            print(f"BOT CRASHED: {e}")
+            sleep(5)
