@@ -27,35 +27,28 @@ dp = Dispatcher(bot)
 carts = {}
 user_states = {}
 user_data = {}
+user_languages = {}
 
 # =========================
-# MENU
+# PRODUCTS
 # =========================
 
-menu = {
-    "🌭 Hot Dogs": [
-        ("Classic Hot Dog", 150),
-        ("Cheese Hot Dog", 180),
-        ("Double Hot Dog", 220),
-    ],
+products = {
+    "Classic Hot Dog": 150,
+    "Cheese Hot Dog": 180,
+    "Double Hot Dog": 220,
 
-    "🌯 Shawarma": [
-        ("Chicken Shawarma", 200),
-        ("Beef Shawarma", 250),
-        ("Mega Shawarma", 320),
-    ],
+    "Chicken Shawarma": 200,
+    "Beef Shawarma": 250,
+    "Mega Shawarma": 320,
 
-    "🥟 Chebureki": [
-        ("Classic Chebureki", 140),
-        ("Cheese Chebureki", 160),
-        ("Meat Chebureki", 190),
-    ],
+    "Classic Chebureki": 140,
+    "Cheese Chebureki": 160,
+    "Meat Chebureki": 190,
 
-    "🥤 Drinks": [
-        ("Cola", 60),
-        ("Ayran", 50),
-        ("Water", 30),
-    ]
+    "Cola": 60,
+    "Ayran": 50,
+    "Water": 30
 }
 
 # =========================
@@ -81,8 +74,10 @@ def main_keyboard():
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
 
-    if message.from_user.id not in carts:
-        carts[message.from_user.id] = []
+    user_id = message.from_user.id
+
+    if user_id not in carts:
+        carts[user_id] = []
 
     await message.answer(
         "👋 Welcome to VAMO Cafe!\n\nChoose category:",
@@ -96,8 +91,35 @@ async def start(message: types.Message):
 @dp.message_handler(lambda message: message.text == "🌐 Change Language")
 async def change_language(message: types.Message):
 
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    keyboard.add("🇷🇺 Русский")
+    keyboard.add("🇬🇧 English")
+    keyboard.add("🇹🇷 Türkçe")
+    keyboard.add("⬅️ Back")
+
     await message.answer(
-        "🌍 Language changed!\n\nChoose category:",
+        "🌍 Choose language:",
+        reply_markup=keyboard
+    )
+
+# =========================
+# SET LANGUAGE
+# =========================
+
+@dp.message_handler(lambda message:
+    message.text in [
+        "🇷🇺 Русский",
+        "🇬🇧 English",
+        "🇹🇷 Türkçe"
+    ]
+)
+async def set_language(message: types.Message):
+
+    user_languages[message.from_user.id] = message.text
+
+    await message.answer(
+        f"✅ Language selected: {message.text}",
         reply_markup=main_keyboard()
     )
 
@@ -190,26 +212,8 @@ async def drinks(message: types.Message):
     )
 
 # =========================
-# ADD PRODUCTS
+# ADD PRODUCT
 # =========================
-
-products = {
-    "Classic Hot Dog": 150,
-    "Cheese Hot Dog": 180,
-    "Double Hot Dog": 220,
-
-    "Chicken Shawarma": 200,
-    "Beef Shawarma": 250,
-    "Mega Shawarma": 320,
-
-    "Classic Chebureki": 140,
-    "Cheese Chebureki": 160,
-    "Meat Chebureki": 190,
-
-    "Cola": 60,
-    "Ayran": 50,
-    "Water": 30
-}
 
 @dp.message_handler(lambda message: message.text in products.keys())
 async def add_product(message: types.Message):
@@ -349,6 +353,10 @@ async def get_contact(message: types.Message):
         "📍 Please send your location.",
         reply_markup=keyboard
     )
+
+# =========================
+# MANUAL PHONE
+# =========================
 
 @dp.message_handler(lambda message: user_states.get(message.from_user.id) == "waiting_phone")
 async def manual_phone(message: types.Message):
