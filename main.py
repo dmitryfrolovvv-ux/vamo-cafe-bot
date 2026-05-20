@@ -405,6 +405,53 @@ async def statistics(message: types.Message):
     await message.answer(text)
 
 # =========================================
+# ADD TO CART
+# =========================================
+
+@dp.message_handler(lambda m: "—" in m.text)
+async def add_to_cart(message: types.Message):
+
+    try:
+
+        text = message.text
+
+        parts = text.split("—")
+
+        product_name = parts[0].strip()
+
+        price = int(
+            parts[1]
+            .replace("TL", "")
+            .strip()
+        )
+
+        cur.execute(
+            """
+            INSERT INTO cart(user_id, product_name, price)
+            VALUES(%s,%s,%s)
+            """,
+            (
+                message.from_user.id,
+                product_name,
+                price
+            )
+        )
+
+        conn.commit()
+
+        await message.answer(
+            f"✅ Added to cart:\n{product_name} — {price} TL",
+            reply_markup=main_menu()
+        )
+
+    except Exception as e:
+
+        conn.rollback()
+
+        await message.answer(str(e))
+
+
+# =========================================
 # CATEGORY
 # =========================================
 
@@ -451,52 +498,6 @@ async def category_handler(message: types.Message):
         kb.add(KeyboardButton("⬅ Back"))
 
         await message.answer(text, reply_markup=kb)
-
-    except Exception as e:
-
-        conn.rollback()
-
-        await message.answer(str(e))
-
-# =========================================
-# ADD TO CART
-# =========================================
-
-@dp.message_handler(lambda m: "—" in m.text)
-async def add_to_cart(message: types.Message):
-
-    try:
-
-        text = message.text
-
-        parts = text.split("—")
-
-        product_name = parts[0].strip()
-
-        price = int(
-            parts[1]
-            .replace("TL", "")
-            .strip()
-        )
-
-        cur.execute(
-            """
-            INSERT INTO cart(user_id, product_name, price)
-            VALUES(%s,%s,%s)
-            """,
-            (
-                message.from_user.id,
-                product_name,
-                price
-            )
-        )
-
-        conn.commit()
-
-        await message.answer(
-            f"✅ Added to cart:\n{product_name} — {price} TL",
-            reply_markup=main_menu()
-        )
 
     except Exception as e:
 
