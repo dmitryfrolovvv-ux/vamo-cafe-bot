@@ -107,38 +107,7 @@ CREATE TABLE IF NOT EXISTS orders(
 
 conn.commit()
 
-# =========================
-# PRODUCTS
-# =========================
 
-products = {
-
-    "🌭 Hot Dogs": [
-
-        ("Classic Hot Dog", 150),
-
-        ("Cheese Hot Dog", 180),
-
-        ("Double Hot Dog", 220)
-
-    ],
-
-    "🌯 Shawarma": [
-
-        ("Chicken Shawarma", 200),
-
-        ("Big Shawarma", 260)
-
-    ],
-
-    "🥤 Drinks": [
-
-        ("Cola", 60),
-
-        ("Ayran", 50)
-
-    ]
-}
 
 # =========================
 # MENU
@@ -146,12 +115,20 @@ products = {
 
 def main_menu():
 
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
 
-    for category in products.keys():
+    cur.execute(
+        "SELECT name FROM categories"
+    )
+
+    categories = cur.fetchall()
+
+    for category in categories:
 
         kb.add(
-            KeyboardButton(category)
+            KeyboardButton(category[0])
         )
 
     kb.add(
@@ -179,37 +156,67 @@ async def start(message: types.Message):
         reply_markup=main_menu()
     )
 
-# =========================
-# CATEGORY
-# =========================
-
-@dp.message_handler(lambda m: m.text in products.keys())
+@dp.message_handler()
 async def category_handler(message: types.Message):
 
-    category = message.text
+    text = message.text
 
-    text = f"{category}\n\n"
+# =====================
+# BACK
+# =====================
 
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    if text == "⬅ Back":
 
-    for item in products[category]:
-
-        text += f"• {item[0]} — {item[1]} TL\n"
-
-        kb.add(
-            KeyboardButton(
-                f"{item[0]} — {item[1]} TL"
-            )
+        await message.answer(
+            "🏠 Main menu",
+            reply_markup=main_menu()
         )
 
-    kb.add(
-        KeyboardButton("⬅ Back")
+        return
+
+# =====================
+# CATEGORY
+# =====================
+
+    cur.execute(
+        """
+        SELECT product_name, price
+        FROM products
+        WHERE category=%s
+        """,
+        (text,)
     )
 
-    await message.answer(
-        text,
-        reply_markup=kb
-    )
+    products = cur.fetchall()
+
+    if products:
+
+        result = f"{text}\n\n"
+
+        kb = ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
+
+        for product in products:
+
+            product_text = f"{product[0]} — {product[1]} TL"
+
+            result += f"• {product_text}\n"
+
+            kb.add(
+                KeyboardButton(product_text)
+            )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+
+        await message.answer(
+            result,
+            reply_markup=kb
+        )
+
+        return
 
 # =========================
 # UNIVERSAL
@@ -344,36 +351,46 @@ async def universal(message: types.Message):
     # ADD PRODUCT
     # =====================
 
-    for category in products.values():
+    cur.execute(
+        """
+        SELECT product_name, price
+        FROM products
+        """
+    )
 
-        for item in category:
+    all_products = cur.fetchall()
 
-            product_text = f"{item[0]} — {item[1]} TL"
+    for item in all_products:
 
-            if text == product_text:
+        product_text = f"{item[0]} — {item[1]} TL"
 
-                user_id = message.from_user.id
+        if text == product_text:
 
-                cur.execute("""
+            user_id = message.from_user.id
+
+            cur.execute(
+                """
                 INSERT INTO cart(
                     user_id,
                     product_name,
                     price
                 )
                 VALUES(%s,%s,%s)
-                """, (
+                """,
+                (
                     user_id,
                     item[0],
                     item[1]
-                ))
-
-                conn.commit()
-
-                await message.answer(
-                    f"✅ Added to cart:\n{item[0]} — {item[1]} TL"
                 )
+            )
 
-                return
+            conn.commit()
+
+            await message.answer(
+                f"✅ Added to cart:\n{item[0]} — {item[1]} TL"
+            )
+
+            return
 
 # =========================
 # LOCATION
