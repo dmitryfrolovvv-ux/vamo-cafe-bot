@@ -156,7 +156,15 @@ async def start(message: types.Message):
         reply_markup=main_menu()
     )
 
-@dp.message_handler(lambda m: m.text not in ["🛒 Cart", "CHECKOUT"])
+def get_categories():
+
+    cur.execute(
+        "SELECT name FROM categories"
+    )
+
+    return [x[0] for x in cur.fetchall()]
+    
+@dp.message_handler(lambda m: m.text in get_categories())
 async def category_handler(message: types.Message):
 
     text = message.text
@@ -225,51 +233,6 @@ async def category_handler(message: types.Message):
 
         return
 
-    # =====================
-    # ADD TO CART
-    # =====================
-
-    cur.execute(
-        """
-        SELECT product_name, price
-        FROM products
-        """
-    )
-
-    all_products = cur.fetchall()
-
-    for item in all_products:
-
-        product_text = f"{item[0]} — {item[1]} TL"
-
-        if text == product_text:
-
-            user_id = message.from_user.id
-
-            cur.execute(
-                """
-                INSERT INTO cart(
-                    user_id,
-                    product_name,
-                    price
-                )
-                VALUES(%s,%s,%s)
-                """,
-                (
-                    user_id,
-                    item[0],
-                    item[1]
-                )
-            )
-
-            conn.commit()
-
-            await message.answer(
-                f"✅ Added to cart:\n{item[0]} — {item[1]} TL"
-            )
-
-            return
-            
 # =========================
 # UNIVERSAL
 # =========================
