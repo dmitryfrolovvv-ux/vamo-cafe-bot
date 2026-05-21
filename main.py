@@ -225,7 +225,7 @@ async def category_handler(message: types.Message):
             resize_keyboard=True
         )
 
-        for product in category_products:
+    for product in category_products:
 
     name = product[0]
 
