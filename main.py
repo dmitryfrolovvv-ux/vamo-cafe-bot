@@ -152,7 +152,7 @@ register_admin(
 async def reset_btn(message: types.Message, state: FSMContext):
 
     if message.from_user.id != ADMIN_ID:1472777680
-        return
+    return
 
     await state.finish()
 
