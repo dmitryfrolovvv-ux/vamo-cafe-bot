@@ -605,12 +605,8 @@ def run_web():
 
 if __name__ == "__main__":
 
-    Thread(
-        target=run_web
-    ).start()
-
     keep_alive()
-    
+
     executor.start_polling(
         dp,
         skip_updates=True
