@@ -217,13 +217,13 @@ async def category_handler(message: types.Message):
 
     category_products = cur.fetchall()
 
-    if category_products:
+if category_products:
 
     kb = ReplyKeyboardMarkup(
         resize_keyboard=True
     )
 
-        for product in category_products:
+    for product in category_products:
 
         name = product[0]
 
@@ -237,9 +237,9 @@ async def category_handler(message: types.Message):
             KeyboardButton(product_text)
         )
 
-            if image:
+        if image:
 
-                await bot.send_photo(
+            await bot.send_photo(
                 message.chat.id,
                 photo=image,
                 caption=product_text
@@ -247,7 +247,7 @@ async def category_handler(message: types.Message):
 
         else:
 
-    await message.answer(
+            await message.answer(
                 product_text
             )
 
