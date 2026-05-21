@@ -148,7 +148,7 @@ register_admin(
 # START
 # =========================
 
-@dp.message_handler(lambda m: m.text == "♻ Reset", state="*")
+@dp.message_handler(lambda m: "reset" in m.text, state="*")
 async def reset_btn(message: types.Message, state: FSMContext):
 
     if message.from_user.id != ADMIN_ID:
