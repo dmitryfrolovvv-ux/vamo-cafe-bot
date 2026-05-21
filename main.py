@@ -217,50 +217,50 @@ async def category_handler(message: types.Message):
 
     category_products = cur.fetchall()
 
-    if category_products:
+if category_products:
 
-        result = f"{text}\n\n"
-
-        kb = ReplyKeyboardMarkup(
-            resize_keyboard=True
-        )
-
-for product in category_products:
-
-    name = product[0]
-
-    price = product[1]
-
-    image = product[2]
-
-    product_text = f"{name} — {price} TL"
-
-    kb.add(
-        KeyboardButton(product_text)
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
     )
 
-    if image:
+    for product in category_products:
 
-        await bot.send_photo(
-            message.chat.id,
-            photo=image,
-            caption=product_text
+        name = product[0]
+
+        price = product[1]
+
+        image = product[2]
+
+        product_text = f"{name} — {price} TL"
+
+        kb.add(
+            KeyboardButton(product_text)
         )
 
-    else:
+        if image:
 
-        await message.answer(product_text)
+            await bot.send_photo(
+                message.chat.id,
+                photo=image,
+                caption=product_text
+            )
 
-kb.add(
-    KeyboardButton("⬅ Back")
-)
+        else:
 
-await message.answer(
-    "⬇ Select product",
-    reply_markup=kb
-)
+            await message.answer(
+                product_text
+            )
 
-return
+    kb.add(
+        KeyboardButton("⬅ Back")
+    )
+
+    await message.answer(
+        "⬇ Select product",
+        reply_markup=kb
+    )
+
+    return
 
 # =========================
 # UNIVERSAL
