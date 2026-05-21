@@ -233,16 +233,14 @@ async def category_handler(message: types.Message):
 
             image = product[2]
 
-            product_text = f"{name} — {price} TL"
+            inline_kb = InlineKeyboardMarkup()
 
-    inline_kb = InlineKeyboardMarkup()
-    
-    inline_kb.add(
-        InlineKeyboardButton(
-            text="➕ Add to cart",
-            callback_data=f"add_{name}"
-        )
-    )
+            inline_kb.add(
+                InlineKeyboardButton(
+                    text="➕ Add to cart",
+                    callback_data=f"add_{name}"
+                )
+            )
 
             if image:
 
@@ -251,7 +249,7 @@ async def category_handler(message: types.Message):
                     photo=image,
                     caption=f"🍽 {name}\n\n💰 {price} TL",
                     reply_markup=inline_kb
-                )    
+                )
 
             else:
 
@@ -265,7 +263,7 @@ async def category_handler(message: types.Message):
         )
 
         await message.answer(
-            "⬇ Select product",
+            "⬇ Choose product",
             reply_markup=kb
         )
 
