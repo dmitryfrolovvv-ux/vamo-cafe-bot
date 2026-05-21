@@ -160,6 +160,13 @@ async def start(message: types.Message):
 async def category_handler(message: types.Message):
 
     text = message.text
+    
+    # =====================
+    # IGNORE CART
+    # =====================
+
+    if text == "🛒 Cart":
+        return
 
     # =====================
     # BACK
