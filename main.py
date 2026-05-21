@@ -15,7 +15,9 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import (
     ReplyKeyboardMarkup,
-    KeyboardButton
+    KeyboardButton,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton
 )
 
 # =========================
@@ -233,22 +235,29 @@ async def category_handler(message: types.Message):
 
             product_text = f"{name} — {price} TL"
 
-            kb.add(
-                KeyboardButton(product_text)
-            )
+    inline_kb = InlineKeyboardMarkup()
+    
+    inline_kb.add(
+        InlineKeyboardButton(
+            text="➕ Add to cart",
+            callback_data=f"add_{name}"
+        )
+    )
 
             if image:
 
                 await bot.send_photo(
                     message.chat.id,
                     photo=image,
-                    caption=product_text
-                )
+                    caption=f"🍽 {name}\n\n💰 {price} TL",
+                    reply_markup=inline_kb
+                )    
 
             else:
 
                 await message.answer(
-                    product_text
+                    f"🍽 {name}\n\n💰 {price} TL",
+                    reply_markup=inline_kb
                 )
 
         kb.add(
@@ -261,6 +270,58 @@ async def category_handler(message: types.Message):
         )
 
         return
+
+@dp.callback_query_handler(lambda c: c.data.startswith("add_"))
+async def add_to_cart_callback(callback: types.CallbackQuery):
+
+    product_name = callback.data.replace("add_", "")
+
+    user_id = callback.from_user.id
+
+    cur.execute(
+        """
+        SELECT price
+        FROM products
+        WHERE product_name=%s
+        """,
+        (product_name,)
+    )
+
+    product = cur.fetchone()
+
+    if not product:
+
+        await callback.answer(
+            "❌ Product not found",
+            show_alert=True
+        )
+
+        return
+
+    price = product[0]
+
+    cur.execute(
+        """
+        INSERT INTO cart(
+            user_id,
+            product_name,
+            price
+        )
+        VALUES(%s,%s,%s)
+        """,
+        (
+            user_id,
+            product_name,
+            price
+        )
+    )
+
+    conn.commit()
+
+    await callback.answer(
+        "✅ Added to cart"
+    )
+
 # =========================
 # UNIVERSAL
 # =========================
@@ -394,46 +455,6 @@ async def universal(message: types.Message):
     # ADD PRODUCT
     # =====================
 
-    cur.execute(
-        """
-        SELECT product_name, price
-        FROM products
-        """
-    )
-
-    all_products = cur.fetchall()
-
-    for item in all_products:
-
-        product_text = f"{item[0]} — {item[1]} TL"
-
-        if text == product_text:
-
-            user_id = message.from_user.id
-
-            cur.execute(
-                """
-                INSERT INTO cart(
-                    user_id,
-                    product_name,
-                    price
-                )
-                VALUES(%s,%s,%s)
-                """,
-                (
-                    user_id,
-                    item[0],
-                    item[1]
-                )
-            )
-
-            conn.commit()
-
-            await message.answer(
-                f"✅ Added to cart:\n{item[0]} — {item[1]} TL"
-            )
-
-            return
 
 # =========================
 # LOCATION
