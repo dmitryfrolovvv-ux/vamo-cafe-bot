@@ -156,7 +156,7 @@ async def start(message: types.Message):
         reply_markup=main_menu()
     )
 
-@dp.message_handler()
+@dp.message_handler(lambda m: m.text not in ["🛒 Cart", "CHECKOUT"])
 async def category_handler(message: types.Message):
 
     text = message.text
