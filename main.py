@@ -208,7 +208,7 @@ async def category_handler(message: types.Message):
 
     cur.execute(
         """
-        SELECT product_name, price
+        SELECT product_name, price, image
         FROM products
         WHERE category=%s
         """,
@@ -227,24 +227,40 @@ async def category_handler(message: types.Message):
 
         for product in category_products:
 
-            product_text = f"{product[0]} — {product[1]} TL"
+    name = product[0]
 
-            result += f"• {product_text}\n"
+    price = product[1]
 
-            kb.add(
-                KeyboardButton(product_text)
-            )
+    image = product[2]
 
-        kb.add(
-            KeyboardButton("⬅ Back")
+    product_text = f"{name} — {price} TL"
+
+    kb.add(
+        KeyboardButton(product_text)
+    )
+
+    if image:
+
+        await bot.send_photo(
+            message.chat.id,
+            photo=image,
+            caption=product_text
         )
 
-        await message.answer(
-            result,
-            reply_markup=kb
-        )
+    else:
 
-        return
+        await message.answer(product_text)
+
+kb.add(
+    KeyboardButton("⬅ Back")
+)
+
+await message.answer(
+    "⬇ Select product",
+    reply_markup=kb
+)
+
+return
 
 # =========================
 # UNIVERSAL
