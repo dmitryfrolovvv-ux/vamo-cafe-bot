@@ -20,6 +20,8 @@ class AdminStates(StatesGroup):
 
     add_product_price = State()
 
+    add_product_photo = State()
+
 
 # =========================
 # ADMIN MENU
@@ -40,6 +42,8 @@ def admin_menu():
     kb.add(KeyboardButton("📦 Orders"))
 
     kb.add(KeyboardButton("📊 Stats"))
+
+    kb.add(KeyboardButton("♻ Reset"))
 
     kb.add(KeyboardButton("⬅ Back"))
 
@@ -67,6 +71,23 @@ def register_admin(dp, conn, cur, main_menu):
         await message.answer(
             "⚙ ADMIN PANEL",
             reply_markup=admin_menu()
+        )
+
+    # =====================
+    # RESET
+    # =====================
+
+    @dp.message_handler(lambda m: "Reset" in m.text, state="*")
+    async def reset_btn(message: types.Message, state: FSMContext):
+
+        if message.from_user.id != ADMIN_ID:
+            return
+
+        await state.finish()
+
+        await message.answer(
+            "✅ State reset",
+            reply_markup=main_menu()
         )
 
     # =====================
@@ -106,24 +127,6 @@ def register_admin(dp, conn, cur, main_menu):
 
     @dp.message_handler(state=AdminStates.add_category)
     async def add_category_finish(message: types.Message, state: FSMContext):
-
-        forbidden = [
-            "⬅ Back",
-            "📦 Orders",
-            "📊 Stats",
-            "➕ Add category",
-            "❌ Delete category",
-            "➕ Add product",
-            "❌ Delete product"
-        ]
-
-        if message.text in forbidden:
-
-            await message.answer(
-                "❌ Enter category name manually"
-            )
-
-            return
 
         try:
 
@@ -269,23 +272,6 @@ def register_admin(dp, conn, cur, main_menu):
     @dp.message_handler(state=AdminStates.add_product_category)
     async def add_product_category(message: types.Message, state: FSMContext):
 
-        forbidden = [
-            "📦 Orders",
-            "📊 Stats",
-            "➕ Add category",
-            "❌ Delete category",
-            "➕ Add product",
-            "❌ Delete product"
-        ]
-
-        if message.text in forbidden:
-
-            await message.answer(
-                "❌ Select category only"
-            )
-
-            return
-
         await state.update_data(
             category=message.text
         )
@@ -298,24 +284,6 @@ def register_admin(dp, conn, cur, main_menu):
 
     @dp.message_handler(state=AdminStates.add_product_name)
     async def add_product_name(message: types.Message, state: FSMContext):
-
-        forbidden = [
-            "⬅ Back",
-            "📦 Orders",
-            "📊 Stats",
-            "➕ Add category",
-            "❌ Delete category",
-            "➕ Add product",
-            "❌ Delete product"
-        ]
-
-        if message.text in forbidden:
-
-            await message.answer(
-                "❌ Enter product name manually"
-            )
-
-            return
 
         await state.update_data(
             name=message.text
@@ -338,42 +306,66 @@ def register_admin(dp, conn, cur, main_menu):
 
             return
 
+        price = int(message.text)
+
+        await state.update_data(
+            price=price
+        )
+
+        await message.answer(
+            "🖼 Send product photo"
+        )
+
+        await AdminStates.add_product_photo.set()
+
+    # =====================
+    # PRODUCT PHOTO
+    # =====================
+
+    @dp.message_handler(
+        content_types=types.ContentType.PHOTO,
+        state=AdminStates.add_product_photo
+    )
+    async def add_product_photo(message: types.Message, state: FSMContext):
+
         try:
 
-            price = int(message.text)
+            photo_id = message.photo[-1].file_id
 
             data = await state.get_data()
 
-            category = data["category"]
-
-            name = data["name"]
-
             cur.execute(
                 """
-                INSERT INTO products(category, product_name, price)
-                VALUES(%s,%s,%s)
+                INSERT INTO products(
+                    category,
+                    product_name,
+                    price,
+                    image
+                )
+                VALUES(%s,%s,%s,%s)
                 """,
                 (
-                    category,
-                    name,
-                    price
+                    data["category"],
+                    data["name"],
+                    data["price"],
+                    photo_id
                 )
             )
 
             conn.commit()
 
             await message.answer(
-                "✅ Product added",
+                "✅ Product added with photo",
                 reply_markup=admin_menu()
             )
+
+            await state.finish()
 
         except Exception as e:
 
             conn.rollback()
 
             await message.answer(str(e))
-
-        await state.finish()
 
     # =====================
     # DELETE PRODUCT
@@ -458,34 +450,26 @@ def register_admin(dp, conn, cur, main_menu):
 
         await state.finish()
 
-        try:
+        cur.execute(
+            """
+            SELECT order_text
+            FROM orders
+            ORDER BY id DESC
+            LIMIT 10
+            """
+        )
 
-            cur.execute(
-                """
-                SELECT order_text
-                FROM orders
-                ORDER BY id DESC
-                LIMIT 10
-                """
-            )
+        orders = cur.fetchall()
 
-            orders = cur.fetchall()
+        if not orders:
 
-            if not orders:
+            await message.answer("📭 No orders")
 
-                await message.answer("📭 No orders")
+            return
 
-                return
+        for order in orders:
 
-            for order in orders:
-
-                await message.answer(order[0])
-
-        except Exception as e:
-
-            conn.rollback()
-
-            await message.answer(str(e))
+            await message.answer(order[0])
 
     # =====================
     # STATS
@@ -499,35 +483,27 @@ def register_admin(dp, conn, cur, main_menu):
 
         await state.finish()
 
-        try:
+        cur.execute(
+            "SELECT COUNT(*) FROM orders"
+        )
 
-            cur.execute(
-                "SELECT COUNT(*) FROM orders"
-            )
+        orders_count = cur.fetchone()[0]
 
-            orders_count = cur.fetchone()[0]
+        cur.execute(
+            "SELECT COUNT(*) FROM products"
+        )
 
-            cur.execute(
-                "SELECT COUNT(*) FROM products"
-            )
+        products_count = cur.fetchone()[0]
 
-            products_count = cur.fetchone()[0]
+        cur.execute(
+            "SELECT COUNT(*) FROM categories"
+        )
 
-            cur.execute(
-                "SELECT COUNT(*) FROM categories"
-            )
+        categories_count = cur.fetchone()[0]
 
-            categories_count = cur.fetchone()[0]
-
-            await message.answer(
-                f"📊 STATS\n\n"
-                f"📦 Orders: {orders_count}\n"
-                f"🍔 Products: {products_count}\n"
-                f"📂 Categories: {categories_count}"
-            )
-
-        except Exception as e:
-
-            conn.rollback()
-
-            await message.answer(str(e))
+        await message.answer(
+            f"📊 STATS\n\n"
+            f"📦 Orders: {orders_count}\n"
+            f"🍔 Products: {products_count}\n"
+            f"📂 Categories: {categories_count}"
+        )
