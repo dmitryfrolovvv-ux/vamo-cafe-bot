@@ -223,44 +223,44 @@ if category_products:
         resize_keyboard=True
     )
 
-    for product in category_products:
+for product in category_products:
 
-        name = product[0]
+    name = product[0]
 
-        price = product[1]
+    price = product[1]
 
-        image = product[2]
+    image = product[2]
 
-        product_text = f"{name} — {price} TL"
-
-        kb.add(
-            KeyboardButton(product_text)
-        )
-
-        if image:
-
-            await bot.send_photo(
-                message.chat.id,
-                photo=image,
-                caption=product_text
-            )
-
-        else:
-
-            await message.answer(
-                product_text
-            )
+    product_text = f"{name} — {price} TL"
 
     kb.add(
-        KeyboardButton("⬅ Back")
+        KeyboardButton(product_text)
     )
 
-    await message.answer(
-        "⬇ Select product",
-        reply_markup=kb
-    )
+    if image:
 
-    return
+        await bot.send_photo(
+            message.chat.id,
+            photo=image,
+            caption=product_text
+        )
+
+    else:
+
+        await message.answer(
+            product_text
+        )
+
+kb.add(
+    KeyboardButton("⬅ Back")
+)
+
+await message.answer(
+    "⬇ Select product",
+    reply_markup=kb
+)
+
+return
 
 # =========================
 # UNIVERSAL
