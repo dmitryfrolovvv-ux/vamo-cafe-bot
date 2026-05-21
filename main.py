@@ -161,9 +161,9 @@ async def category_handler(message: types.Message):
 
     text = message.text
 
-# =====================
-# BACK
-# =====================
+    # =====================
+    # BACK
+    # =====================
 
     if text == "⬅ Back":
 
@@ -174,9 +174,9 @@ async def category_handler(message: types.Message):
 
         return
 
-# =====================
-# CATEGORY
-# =====================
+    # =====================
+    # CATEGORY
+    # =====================
 
     cur.execute(
         """
@@ -187,9 +187,9 @@ async def category_handler(message: types.Message):
         (text,)
     )
 
-    products = cur.fetchall()
+    category_products = cur.fetchall()
 
-    if products:
+    if category_products:
 
         result = f"{text}\n\n"
 
@@ -197,7 +197,7 @@ async def category_handler(message: types.Message):
             resize_keyboard=True
         )
 
-        for product in products:
+        for product in category_products:
 
             product_text = f"{product[0]} — {product[1]} TL"
 
@@ -218,6 +218,51 @@ async def category_handler(message: types.Message):
 
         return
 
+    # =====================
+    # ADD TO CART
+    # =====================
+
+    cur.execute(
+        """
+        SELECT product_name, price
+        FROM products
+        """
+    )
+
+    all_products = cur.fetchall()
+
+    for item in all_products:
+
+        product_text = f"{item[0]} — {item[1]} TL"
+
+        if text == product_text:
+
+            user_id = message.from_user.id
+
+            cur.execute(
+                """
+                INSERT INTO cart(
+                    user_id,
+                    product_name,
+                    price
+                )
+                VALUES(%s,%s,%s)
+                """,
+                (
+                    user_id,
+                    item[0],
+                    item[1]
+                )
+            )
+
+            conn.commit()
+
+            await message.answer(
+                f"✅ Added to cart:\n{item[0]} — {item[1]} TL"
+            )
+
+            return
+            
 # =========================
 # UNIVERSAL
 # =========================
