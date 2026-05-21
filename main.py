@@ -148,6 +148,16 @@ register_admin(
 # START
 # =========================
 
+@dp.message_handler(commands=["reset"], state="*")
+async def reset_state(message: types.Message, state: FSMContext):
+
+    await state.finish()
+
+    await message.answer(
+        "✅ State reset",
+        reply_markup=main_menu()
+    )
+
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
 
@@ -237,7 +247,7 @@ async def category_handler(message: types.Message):
 # UNIVERSAL
 # =========================
 
-@dp.message_handler()
+@dp.message_handler(state=None)
 async def universal(message: types.Message):
 
     text = message.text
