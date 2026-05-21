@@ -44,11 +44,21 @@ dp = Dispatcher(bot, storage=storage)
 # FLASK
 # =========================
 
-app = Flask(__name__)
+app = Flask('')
 
-@app.route("/")
+
+@app.route('/')
 def home():
-    return "VAMO BOT WORKING"
+    return "Bot is running"
+
+
+def run_web():
+    app.run(host='0.0.0.0', port=10000)
+
+
+def keep_alive():
+    t = Thread(target=run_web)
+    t.start()
 
 # =========================
 # DATABASE
@@ -582,6 +592,8 @@ if __name__ == "__main__":
         target=run_web
     ).start()
 
+    keep_alive()
+    
     executor.start_polling(
         dp,
         skip_updates=True
