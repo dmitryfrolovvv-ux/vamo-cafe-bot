@@ -350,7 +350,7 @@ def register_admin(dp, conn, cur, main_menu):
 
             cur.execute(
                 """
-                INSERT INTO products(category, name, price)
+                INSERT INTO products(category, product_name, price)
                 VALUES(%s,%s,%s)
                 """,
                 (
@@ -388,7 +388,7 @@ def register_admin(dp, conn, cur, main_menu):
         await state.finish()
 
         cur.execute(
-            "SELECT name FROM products"
+            "SELECT product_name FROM products"
         )
 
         products = cur.fetchall()
@@ -429,7 +429,7 @@ def register_admin(dp, conn, cur, main_menu):
         try:
 
             cur.execute(
-                "DELETE FROM products WHERE name=%s",
+                "DELETE FROM products WHERE product_name=%s",
                 (product,)
             )
 
