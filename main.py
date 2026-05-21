@@ -181,7 +181,7 @@ def get_categories():
 async def category_handler(message: types.Message):
 
     text = message.text
-    
+
     # =====================
     # IGNORE CART
     # =====================
@@ -217,51 +217,50 @@ async def category_handler(message: types.Message):
 
     category_products = cur.fetchall()
 
-if category_products:
+    if category_products:
 
-    kb = ReplyKeyboardMarkup(
-        resize_keyboard=True
-    )
-
-for product in category_products:
-
-    name = product[0]
-
-    price = product[1]
-
-    image = product[2]
-
-    product_text = f"{name} — {price} TL"
-
-    kb.add(
-        KeyboardButton(product_text)
-    )
-
-    if image:
-
-        await bot.send_photo(
-            message.chat.id,
-            photo=image,
-            caption=product_text
+        kb = ReplyKeyboardMarkup(
+            resize_keyboard=True
         )
 
-    else:
+        for product in category_products:
+
+            name = product[0]
+
+            price = product[1]
+
+            image = product[2]
+
+            product_text = f"{name} — {price} TL"
+
+            kb.add(
+                KeyboardButton(product_text)
+            )
+
+            if image:
+
+                await bot.send_photo(
+                    message.chat.id,
+                    photo=image,
+                    caption=product_text
+                )
+
+            else:
+
+                await message.answer(
+                    product_text
+                )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
 
         await message.answer(
-            product_text
+            "⬇ Select product",
+            reply_markup=kb
         )
 
-kb.add(
-    KeyboardButton("⬅ Back")
-)
-
-await message.answer(
-    "⬇ Select product",
-    reply_markup=kb
-)
-
-return
-
+        return
 # =========================
 # UNIVERSAL
 # =========================
