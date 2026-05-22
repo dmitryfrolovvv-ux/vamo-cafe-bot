@@ -904,7 +904,8 @@ async def checkout_comment(
         text += f"\n\n📞 Phone:\n{phone}"
 
         text += f"\n\n🚪 Comment:\n{comment}"
-        
+
+
 kb = InlineKeyboardMarkup(row_width=2)
 
 kb.add(
