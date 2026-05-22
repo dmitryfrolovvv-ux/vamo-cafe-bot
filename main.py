@@ -86,6 +86,16 @@ CREATE TABLE IF NOT EXISTS orders(
 
 conn.commit()
 
+try:
+    cur.execute("""
+        ALTER TABLE products
+        ADD COLUMN description TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
+
 # =========================
 # INLINE MAIN MENU
 # =========================
