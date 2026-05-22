@@ -189,18 +189,18 @@ async def start(message: types.Message):
 )
 async def category_callback(callback: types.CallbackQuery):
 
-    category = callback.data.replace(
+    category_name = callback.data.replace(
         "category_",
         ""
     )
 
     cur.execute(
         """
-        SELECT product_name, price, image
+        SELECT product_name
         FROM products
         WHERE category=%s
         """,
-        (category,)
+        (category_name,)
     )
 
     products = cur.fetchall()
@@ -214,54 +214,106 @@ async def category_callback(callback: types.CallbackQuery):
 
         return
 
+    products_kb = InlineKeyboardMarkup(row_width=1)
+
     for product in products:
 
-        name = product[0]
+        product_name = product[0]
 
-        price = product[1]
-
-        image = product[2]
-
-        kb = InlineKeyboardMarkup(row_width=1)
-
-        kb.add(
+        products_kb.add(
             InlineKeyboardButton(
-                text="➕ Add to cart",
-                callback_data=f"add_{name}"
+                text=product_name,
+                callback_data=f"product_{product_name}"
             )
         )
 
-
-        if image:
-
-            await bot.send_photo(
-                callback.message.chat.id,
-                photo=image,
-                caption=f"🍽 {name}\n\n💰 {price} TL",
-                reply_markup=kb
-            )
-
-        else:
-
-            await callback.message.answer(
-                f"🍽 {name}\n\n💰 {price} TL",
-                reply_markup=kb
-            )
-    back_kb = InlineKeyboardMarkup()
-    
-    back_kb.add(
+    products_kb.row(
         InlineKeyboardButton(
             text="⬅ Back",
             callback_data="back_main"
         )
     )
-    
+
     await callback.message.answer(
-        "⬅ Return to menu",
-        reply_markup=back_kb
+        f"📋 {category_name}",
+        reply_markup=products_kb
     )
+
     await callback.answer()
 
+# =========================
+# PRODUCT CARD
+# =========================
+
+@dp.callback_query_handler(
+    lambda c: c.data.startswith("product_")
+)
+async def product_card(callback: types.CallbackQuery):
+
+    product_name = callback.data.replace(
+        "product_",
+        ""
+    )
+
+    cur.execute(
+        """
+        SELECT product_name, price, image
+        FROM products
+        WHERE product_name=%s
+        """,
+        (product_name,)
+    )
+
+    product = cur.fetchone()
+
+    if not product:
+
+        await callback.answer(
+            "❌ Product not found",
+            show_alert=True
+        )
+
+        return
+
+    name = product[0]
+
+    price = product[1]
+
+    image = product[2]
+
+    kb = InlineKeyboardMarkup(row_width=1)
+
+    kb.add(
+        InlineKeyboardButton(
+            text="➕ Add to cart",
+            callback_data=f"add_{name}"
+        )
+    )
+
+    kb.add(
+        InlineKeyboardButton(
+            text="⬅ Back",
+            callback_data="back_main"
+        )
+    )
+
+    if image:
+
+        await bot.send_photo(
+            callback.message.chat.id,
+            photo=image,
+            caption=f"🍽 {name}\n\n💰 {price} TL",
+            reply_markup=kb
+        )
+
+    else:
+
+        await callback.message.answer(
+            f"🍽 {name}\n\n💰 {price} TL",
+            reply_markup=kb
+        )
+
+        await callback.answer()
 # =========================
 # ADD TO CART
 # =========================
