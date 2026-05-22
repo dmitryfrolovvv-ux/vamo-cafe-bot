@@ -475,16 +475,16 @@ async def minus_callback(callback: types.CallbackQuery):
 )
 async def add_to_cart_callback(callback: types.CallbackQuery):
 
-        data = callback.data.replace(
-            "add_",
-            ""
-        )
-        
-        parts = data.rsplit("_", 1)
-        
-        product_name = parts[0]
-        
-        count = int(parts[1])
+    data = callback.data.replace(
+        "add_",
+        ""
+    )
+
+    parts = data.rsplit("_", 1)
+
+    product_name = parts[0]
+
+    count = int(parts[1])
 
     user_id = callback.from_user.id
 
@@ -509,6 +509,7 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
         return
 
     price = product[0]
+
     price = price * count
 
     cur.execute(
@@ -530,7 +531,7 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
     conn.commit()
 
     await callback.answer(
-        "✅ Added to cart"
+        f"✅ Added {count}x to cart"
     )
 
 # =========================
