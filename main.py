@@ -267,7 +267,7 @@ async def product_card(callback: types.CallbackQuery):
 
     cur.execute(
         """
-        SELECT product_name, price, image
+        SELECT product_name, description, price, image
         FROM products
         WHERE product_name=%s
         """,
@@ -287,9 +287,11 @@ async def product_card(callback: types.CallbackQuery):
 
     name = product[0]
 
-    price = product[1]
+    description = product[1]
 
-    image = product[2]
+    price = product[2]
+    
+    image = product[3]
 
     kb = InlineKeyboardMarkup(row_width=1)
 
@@ -312,9 +314,11 @@ async def product_card(callback: types.CallbackQuery):
         await bot.send_photo(
             callback.message.chat.id,
             photo=image,
-            caption=f"🍽 {name}\n\n💰 {price} TL",
-            reply_markup=kb
-        )
+            caption=(
+            f"🍽 {name}\n\n"
+            f"📝 {description}\n\n"
+            f"💰 {price} TL"
+)
 
     else:
 
