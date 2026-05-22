@@ -243,20 +243,20 @@ async def category_callback(callback: types.CallbackQuery):
                 f"🍽 {name}\n\n💰 {price} TL",
                 reply_markup=kb
             )
-back_kb = InlineKeyboardMarkup()
-
-back_kb.add(
-    InlineKeyboardButton(
-        text="⬅ Back",
-        callback_data="back_main"
+    back_kb = InlineKeyboardMarkup()
+    
+    back_kb.add(
+        InlineKeyboardButton(
+            text="⬅ Back",
+            callback_data="back_main"
+        )
     )
-)
-
-await callback.message.answer(
-    "⬅ Return to menu",
-    reply_markup=back_kb
-)
-await callback.answer()
+    
+    await callback.message.answer(
+        "⬅ Return to menu",
+        reply_markup=back_kb
+    )
+    await callback.answer()
 
 # =========================
 # ADD TO CART
