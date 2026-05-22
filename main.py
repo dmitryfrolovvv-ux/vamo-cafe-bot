@@ -905,6 +905,9 @@ async def checkout_comment(
 
         text += f"\n\n🚪 Comment:\n{comment}"
 
+except:
+    pass
+
 kb = InlineKeyboardMarkup(row_width=2)
 
 kb.add(
