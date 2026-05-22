@@ -267,7 +267,7 @@ async def product_card(callback: types.CallbackQuery):
 
     cur.execute(
         """
-        SELECT product_name, description, price, image
+        SELECT product_name, description, price, image, category
         FROM products
         WHERE product_name=%s
         """,
@@ -286,26 +286,43 @@ async def product_card(callback: types.CallbackQuery):
         return
 
     name = product[0]
-
     description = product[1]
-
     price = product[2]
-    
     image = product[3]
+    category = product[4]
 
-    kb = InlineKeyboardMarkup(row_width=1)
+    count = 1
 
-    kb.add(
+    kb = InlineKeyboardMarkup(row_width=3)
+
+    kb.row(
         InlineKeyboardButton(
-            text="➕ Add to cart",
-            callback_data=f"add_{name}"
+            text="➖",
+            callback_data=f"minus_{name}_{count}_{category}"
+        ),
+
+        InlineKeyboardButton(
+            text=str(count),
+            callback_data="count"
+        ),
+
+        InlineKeyboardButton(
+            text="➕",
+            callback_data=f"plus_{name}_{count}_{category}"
         )
     )
 
-    kb.add(
+    kb.row(
+        InlineKeyboardButton(
+            text="🛒 Add to cart",
+            callback_data=f"add_{name}_{count}"
+        )
+    )
+
+    kb.row(
         InlineKeyboardButton(
             text="⬅ Back",
-            callback_data="back_main"
+            callback_data=f"category_{category}"
         )
     )
 
@@ -314,21 +331,122 @@ async def product_card(callback: types.CallbackQuery):
         await bot.send_photo(
             callback.message.chat.id,
             photo=image,
-            caption=(
-                f"🍽 {name}\n\n"
-                f"📝 {description}\n\n"
-                f"💰 {price} TL"
+    await callback.answer()
+            
+# =========================
+# PLUS
+# =========================
+@dp.callback_query_handler(
+    lambda c: c.data.startswith("plus_")
+)
+async def plus_callback(callback: types.CallbackQuery):
+
+    data = callback.data.replace("plus_", "")
+
+    parts = data.rsplit("_", 2)
+
+    name = parts[0]
+    count = int(parts[1])
+    category = parts[2]
+
+    count += 1
+
+    kb = InlineKeyboardMarkup(row_width=3)
+
+    kb.row(
+        InlineKeyboardButton(
+            text="➖",
+            callback_data=f"minus_{name}_{count}_{category}"
+        ),
+
+        InlineKeyboardButton(
+            text=str(count),
+            callback_data="count"
+        ),
+
+        InlineKeyboardButton(
+            text="➕",
+            callback_data=f"plus_{name}_{count}_{category}"
         )
     )
 
-    else:
-
-        await callback.message.answer(
-            f"🍽 {name}\n\n💰 {price} TL",
-            reply_markup=kb
+    kb.row(
+        InlineKeyboardButton(
+            text="🛒 Add to cart",
+            callback_data=f"add_{name}_{count}"
         )
+    )
 
-        await callback.answer()
+    kb.row(
+        InlineKeyboardButton(
+            text="⬅ Back",
+            callback_data=f"category_{category}"
+        )
+    )
+
+    await callback.message.edit_reply_markup(
+        reply_markup=kb
+    )
+
+    await callback.answer()
+# =========================
+# MINUS
+# =========================
+
+@dp.callback_query_handler(
+    lambda c: c.data.startswith("minus_")
+)
+async def minus_callback(callback: types.CallbackQuery):
+
+    data = callback.data.replace("minus_", "")
+
+    parts = data.rsplit("_", 2)
+
+    name = parts[0]
+    count = int(parts[1])
+    category = parts[2]
+
+    if count > 1:
+        count -= 1
+
+    kb = InlineKeyboardMarkup(row_width=3)
+
+    kb.row(
+        InlineKeyboardButton(
+            text="➖",
+            callback_data=f"minus_{name}_{count}_{category}"
+        ),
+
+        InlineKeyboardButton(
+            text=str(count),
+            callback_data="count"
+        ),
+
+        InlineKeyboardButton(
+            text="➕",
+            callback_data=f"plus_{name}_{count}_{category}"
+        )
+    )
+
+    kb.row(
+        InlineKeyboardButton(
+            text="🛒 Add to cart",
+            callback_data=f"add_{name}_{count}"
+        )
+    )
+
+    kb.row(
+        InlineKeyboardButton(
+            text="⬅ Back",
+            callback_data=f"category_{category}"
+        )
+    )
+
+    await callback.message.edit_reply_markup(
+        reply_markup=kb
+    )
+
+    await callback.answer()
 # =========================
 # ADD TO CART
 # =========================
@@ -338,10 +456,16 @@ async def product_card(callback: types.CallbackQuery):
 )
 async def add_to_cart_callback(callback: types.CallbackQuery):
 
-    product_name = callback.data.replace(
-        "add_",
-        ""
-    )
+        data = callback.data.replace(
+            "add_",
+            ""
+        )
+        
+        parts = data.rsplit("_", 1)
+        
+        product_name = parts[0]
+        
+        count = int(parts[1])
 
     user_id = callback.from_user.id
 
@@ -366,6 +490,7 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
         return
 
     price = product[0]
+    price = price * count
 
     cur.execute(
         """
