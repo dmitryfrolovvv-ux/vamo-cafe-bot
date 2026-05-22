@@ -567,4 +567,3 @@ def register_admin(dp, conn, cur, main_menu):
             f"🍔 Products: {products_count}\n"
             f"📂 Categories: {categories_count}"
         )
-```
