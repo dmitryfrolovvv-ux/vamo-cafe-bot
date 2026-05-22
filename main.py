@@ -116,14 +116,14 @@ for category in categories:
 
 kb.add(*buttons)
 
-    kb.row(
-        InlineKeyboardButton(
-            text="🛒 Cart",
-            callback_data="open_cart"
-        )
+kb.row(
+    InlineKeyboardButton(
+        text="🛒 Cart",
+        callback_data="open_cart"
     )
+)
 
-    return kb
+return kb
 
 # =========================
 # SIMPLE MENU FOR ADMIN
