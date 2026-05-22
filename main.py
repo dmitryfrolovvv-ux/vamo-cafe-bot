@@ -40,16 +40,6 @@ storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
 # =========================
-# FLASK
-# =========================
-
-
-    app.run(host='0.0.0.0', port=10000)
-
-    t = Thread(target=run_web)
-    t.start()
-
-# =========================
 # DATABASE
 # =========================
 
@@ -637,16 +627,6 @@ async def checkout_comment(
 
         await message.answer(str(e))
 
-# =========================
-# WEB
-# =========================
-
-def run_web():
-
-    app.run(
-        host="0.0.0.0",
-        port=10000
-    )
 
 # =========================
 # RUN
