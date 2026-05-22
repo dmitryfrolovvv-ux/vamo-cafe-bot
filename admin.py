@@ -58,7 +58,6 @@ def admin_menu():
     )
     
     kb.add(
-        KeyboardButton("🖼 Edit category banner"),
         KeyboardButton("📂 Category editor")
     )
 
