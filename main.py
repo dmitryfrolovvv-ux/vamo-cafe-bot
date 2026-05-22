@@ -219,7 +219,7 @@ async def start(message: types.Message):
 )
 async def category_callback(callback: types.CallbackQuery):
 
-    category_name = callback.data.replace(
+    category = callback.data.replace(
         "category_",
         ""
     )
@@ -256,7 +256,7 @@ async def category_callback(callback: types.CallbackQuery):
         FROM products
         WHERE category=%s
         """,
-        (category_name,)
+        (category,)
     )
 
     products = cur.fetchall()
@@ -291,7 +291,7 @@ async def category_callback(callback: types.CallbackQuery):
     )
 
     await callback.message.answer(
-        f"📋 {category_name}",
+        f"📋 {category}",
         reply_markup=products_kb
     )
 
