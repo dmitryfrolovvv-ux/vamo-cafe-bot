@@ -905,24 +905,61 @@ async def checkout_comment(
 
         text += f"\n\n🚪 Comment:\n{comment}"
 
-        await bot.send_message(
-            ADMIN_ID,
-            text
-        )
+kb = InlineKeyboardMarkup(row_width=2)
 
-        cur.execute(
-            """
-            INSERT INTO orders(
-                user_id,
-                order_text
-            )
-            VALUES(%s,%s)
-            """,
-            (
-                user_id,
-                text
-            )
-        )
+kb.add(
+    InlineKeyboardButton(
+        text="🧑‍🍳 Preparing",
+        callback_data=f"status_preparing_{order_id}"
+    ),
+
+    InlineKeyboardButton(
+        text="🛵 Delivery",
+        callback_data=f"status_delivery_{order_id}"
+    )
+)
+
+kb.add(
+    InlineKeyboardButton(
+        text="✅ Completed",
+        callback_data=f"status_completed_{order_id}"
+    ),
+
+    InlineKeyboardButton(
+        text="❌ Cancelled",
+        callback_data=f"status_cancelled_{order_id}"
+    )
+)
+
+        await bot.send_message(
+    ADMIN_ID,
+    order_text,
+    reply_markup=kb
+)
+cur.execute(
+    """
+    INSERT INTO orders(
+        order_text
+    )
+    VALUES(%s)
+    RETURNING id
+    """,
+    (order_text,)
+)
+
+order_id = cur.fetchone()[0]
+
+conn.commit()
+
+kb = InlineKeyboardMarkup(row_width=2)
+
+...
+
+await bot.send_message(
+    ADMIN_ID,
+    order_text,
+    reply_markup=kb
+)
 
         cur.execute(
             """
