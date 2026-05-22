@@ -36,6 +36,10 @@ class AdminStates(StatesGroup):
     waiting_banner_photo = State()
     
     remove_category_banner = State()
+    
+    edit_product = State()
+
+    edit_product_action = State()
 
 # =========================
 # ADMIN MENU
@@ -120,6 +124,91 @@ def register_admin(dp, conn, cur, main_menu):
             "📦 Product editor",
             reply_markup=kb
         )
+        
+    # =====================
+    # EDIT PRODUCT
+    # =====================
+
+    @dp.message_handler(
+        lambda m: m.text == "✏ Edit product",
+        state="*"
+    )
+    async def edit_product_start(
+        message: types.Message
+    ):
+
+        cur.execute(
+            """
+            SELECT product_name
+            FROM products
+            ORDER BY product_name
+            """
+        )
+
+        products = cur.fetchall()
+
+        kb = ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
+
+        for product in products:
+
+            kb.add(
+                KeyboardButton(product[0])
+            )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+
+        await message.answer(
+            "✏ Choose product",
+            reply_markup=kb
+        )
+
+        await AdminStates.edit_product.set()
+
+    @dp.message_handler(
+        state=AdminStates.edit_product
+    )
+    async def edit_product_select(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        await state.update_data(
+            product_name=message.text
+        )
+
+        kb = ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
+
+        kb.add(
+            KeyboardButton("📝 Change name"),
+            KeyboardButton("💰 Change price")
+        )
+
+        kb.add(
+            KeyboardButton("📄 Change description"),
+            KeyboardButton("🖼 Change photo")
+        )
+
+        kb.add(
+            KeyboardButton("📂 Change category")
+        )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+
+        await message.answer(
+            f"✏ Editing: {message.text}",
+            reply_markup=kb
+        )
+
+        await AdminStates.edit_product_action.set()
+        
     # =====================
     # RESET
     # =====================
