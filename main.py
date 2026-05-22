@@ -103,27 +103,27 @@ def inline_main_menu():
 
     categories = cur.fetchall()
 
-buttons = []
+    buttons = []
 
-for category in categories:
+    for category in categories:
 
-    buttons.append(
+        buttons.append(
+            InlineKeyboardButton(
+                text=category[0],
+                callback_data=f"category_{category[0]}"
+            )
+        )
+
+    kb.add(*buttons)
+
+    kb.row(
         InlineKeyboardButton(
-            text=category[0],
-            callback_data=f"category_{category[0]}"
+            text="🛒 Cart",
+            callback_data="open_cart"
         )
     )
 
-kb.add(*buttons)
-
-kb.row(
-    InlineKeyboardButton(
-        text="🛒 Cart",
-        callback_data="open_cart"
-    )
-)
-
-return kb
+    return kb
 
 # =========================
 # SIMPLE MENU FOR ADMIN
