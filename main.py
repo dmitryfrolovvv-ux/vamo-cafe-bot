@@ -103,14 +103,18 @@ def inline_main_menu():
 
     categories = cur.fetchall()
 
-    for category in categories:
+buttons = []
 
-        kb.add(
-            InlineKeyboardButton(
-                text=category[0],
-                callback_data=f"category_{category[0]}"
-            )
+for category in categories:
+
+    buttons.append(
+        InlineKeyboardButton(
+            text=category[0],
+            callback_data=f"category_{category[0]}"
         )
+    )
+
+kb.add(*buttons)
 
     kb.row(
         InlineKeyboardButton(
