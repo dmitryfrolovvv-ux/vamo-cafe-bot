@@ -48,6 +48,8 @@ class AdminStates(StatesGroup):
     waiting_new_description = State()
     
     waiting_new_photo = State()
+    
+    waiting_new_category = State()
 
 # =========================
 # ADMIN MENU
@@ -433,6 +435,84 @@ def register_admin(dp, conn, cur, main_menu):
 
         await message.answer(
             "✅ Product photo updated",
+            reply_markup=admin_menu()
+        )
+
+        await state.finish()
+        
+    # =====================
+    # CHANGE CATEGORY
+    # =====================
+
+    @dp.message_handler(
+        lambda m: m.text == "📂 Change category",
+        state=AdminStates.edit_product_action
+    )
+    async def change_category_start(
+        message: types.Message
+    ):
+
+        cur.execute(
+            """
+            SELECT name
+            FROM categories
+            ORDER BY name
+            """
+        )
+
+        categories = cur.fetchall()
+
+        kb = ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
+
+        for category in categories:
+
+            kb.add(
+                KeyboardButton(category[0])
+            )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+
+        await message.answer(
+            "📂 Choose new category",
+            reply_markup=kb
+        )
+
+        await AdminStates.waiting_new_category.set()
+
+    @dp.message_handler(
+        state=AdminStates.waiting_new_category
+    )
+    async def change_category_finish(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        new_category = message.text
+
+        data = await state.get_data()
+
+        product_name = data["product_name"]
+
+        cur.execute(
+            """
+            UPDATE products
+            SET category=%s
+            WHERE product_name=%s
+            """,
+            (
+                new_category,
+                product_name
+            )
+        )
+
+        conn.commit()
+
+        await message.answer(
+            "✅ Product category updated",
             reply_markup=admin_menu()
         )
 
