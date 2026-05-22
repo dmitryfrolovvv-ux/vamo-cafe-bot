@@ -904,7 +904,14 @@ async def checkout_comment(
         text += f"\n\n📞 Phone:\n{phone}"
 
         text += f"\n\n🚪 Comment:\n{comment}"
+    
+    except Exception as e:
 
+    print(e)
+
+    await message.answer(
+        "❌ Order error"
+    )
 
 kb = InlineKeyboardMarkup(row_width=2)
 
