@@ -115,6 +115,17 @@ try:
 
 except:
     conn.rollback()
+    
+try:
+    cur.execute("""
+        ALTER TABLE orders
+        ADD COLUMN status TEXT
+        DEFAULT '🟡 New'
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
 
 # =========================
 # INLINE MAIN MENU
