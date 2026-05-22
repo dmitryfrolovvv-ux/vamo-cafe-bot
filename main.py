@@ -92,7 +92,7 @@ conn.commit()
 
 def inline_main_menu():
 
-    kb = InlineKeyboardMarkup(row_width=1)
+    kb = InlineKeyboardMarkup(row_width=2)
 
     cur.execute(
         """
@@ -112,7 +112,7 @@ def inline_main_menu():
             )
         )
 
-    kb.add(
+    kb.row(
         InlineKeyboardButton(
             text="🛒 Cart",
             callback_data="open_cart"
