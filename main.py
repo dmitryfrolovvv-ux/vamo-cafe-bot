@@ -227,12 +227,6 @@ async def category_callback(callback: types.CallbackQuery):
             )
         )
 
-        kb.add(
-            InlineKeyboardButton(
-                text="⬅ Back",
-                callback_data="back_main"
-            )
-        )
 
         if image:
 
@@ -249,8 +243,20 @@ async def category_callback(callback: types.CallbackQuery):
                 f"🍽 {name}\n\n💰 {price} TL",
                 reply_markup=kb
             )
+back_kb = InlineKeyboardMarkup()
 
-    await callback.answer()
+back_kb.add(
+    InlineKeyboardButton(
+        text="⬅ Back",
+        callback_data="back_main"
+    )
+)
+
+await callback.message.answer(
+    "⬅ Return to menu",
+    reply_markup=back_kb
+)
+await callback.answer()
 
 # =========================
 # ADD TO CART
