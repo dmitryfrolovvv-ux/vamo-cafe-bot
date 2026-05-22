@@ -241,7 +241,7 @@ if category_data:
 
     if category_image:
 
-        await bot.send_photo(
+    await bot.send_photo(
             callback.message.chat.id,
             photo=category_image,
             caption=(
