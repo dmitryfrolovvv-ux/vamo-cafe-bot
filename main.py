@@ -223,7 +223,32 @@ async def category_callback(callback: types.CallbackQuery):
         "category_",
         ""
     )
+    cur.execute(
+    """
+    SELECT image, description
+    FROM categories
+    WHERE name=%s
+    """,
+    (category,)
+)
 
+category_data = cur.fetchone()
+
+if category_data:
+
+    category_image = category_data[0]
+    category_description = category_data[1]
+
+    if category_image:
+
+        await bot.send_photo(
+            callback.message.chat.id,
+            photo=category_image,
+            caption=(
+                f"📂 {category}\n\n"
+                f"{category_description or ''}"
+            )
+        )
     cur.execute(
         """
         SELECT product_name
