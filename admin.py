@@ -48,8 +48,7 @@ def admin_menu():
     )
 
     kb.add(
-        KeyboardButton("➕ Add product"),
-        KeyboardButton("❌ Delete product")
+        KeyboardButton("📦 Product editor")
     )
     
     kb.add(
@@ -91,7 +90,36 @@ def register_admin(dp, conn, cur, main_menu):
             "⚙ ADMIN PANEL",
             reply_markup=admin_menu()
         )
+    
+    @dp.message_handler(
+        lambda m: m.text == "📦 Product editor",
+        state="*"
+    )
+    async def product_editor(
+        message: types.Message
+    ):
 
+        kb = ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
+
+        kb.add(
+            KeyboardButton("➕ Add product"),
+            KeyboardButton("❌ Delete product")
+        )
+
+        kb.add(
+            KeyboardButton("✏ Edit product")
+        )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+
+        await message.answer(
+            "📦 Product editor",
+            reply_markup=kb
+        )
     # =====================
     # RESET
     # =====================
