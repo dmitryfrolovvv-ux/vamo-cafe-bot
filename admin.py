@@ -30,7 +30,10 @@ class AdminStates(StatesGroup):
     deleting_category = State()
 
     deleting_product = State()
+    
+    edit_category_banner = State()
 
+    waiting_banner_photo = State()
 
 # =========================
 # ADMIN MENU
@@ -50,6 +53,10 @@ def admin_menu():
     kb.add(
         KeyboardButton("➕ Add product"),
         KeyboardButton("❌ Delete product")
+    )
+    
+    kb.add(
+    KeyboardButton("🖼 Edit category banner")
     )
 
     kb.add(
@@ -516,7 +523,133 @@ def register_admin(dp, conn, cur, main_menu):
             await message.answer(str(e))
 
         await state.finish()
+        
+# =====================
+# EDIT CATEGORY BANNER
+# =====================
 
+@dp.message_handler(
+    lambda m: m.text == "🖼 Edit category banner",
+    state="*"
+)
+async def edit_category_banner_start(
+    message: types.Message,
+    state: FSMContext
+):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    await state.finish()
+
+    cur.execute(
+        """
+        SELECT name
+        FROM categories
+        """
+    )
+
+    categories = cur.fetchall()
+
+    if not categories:
+
+        await message.answer(
+            "❌ No categories"
+        )
+
+        return
+
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
+
+    for category in categories:
+
+        kb.add(
+            KeyboardButton(category[0])
+        )
+
+    kb.add(
+        KeyboardButton("⬅ Back")
+    )
+
+    await message.answer(
+        "🖼 Choose category",
+        reply_markup=kb
+    )
+
+    await AdminStates.edit_category_banner.set()
+
+# =====================
+# SELECT CATEGORY
+# =====================
+
+@dp.message_handler(
+    state=AdminStates.edit_category_banner
+)
+async def edit_category_banner_select(
+    message: types.Message,
+    state: FSMContext
+):
+
+    await state.update_data(
+        category=message.text
+    )
+
+    await message.answer(
+        "📸 Send new banner image"
+    )
+
+    await AdminStates.waiting_banner_photo.set()
+
+# =====================
+# SAVE BANNER
+# =====================
+
+@dp.message_handler(
+    content_types=types.ContentType.PHOTO,
+    state=AdminStates.waiting_banner_photo
+)
+async def save_category_banner(
+    message: types.Message,
+    state: FSMContext
+):
+
+    try:
+
+        data = await state.get_data()
+
+        category = data["category"]
+
+        photo_id = message.photo[-1].file_id
+
+        cur.execute(
+            """
+            UPDATE categories
+            SET image=%s
+            WHERE name=%s
+            """,
+            (
+                photo_id,
+                category
+            )
+        )
+
+        conn.commit()
+
+        await message.answer(
+            "✅ Category banner updated",
+            reply_markup=admin_menu()
+        )
+
+    except Exception as e:
+
+        conn.rollback()
+
+        await message.answer(str(e))
+
+    await state.finish()
+    
     # =====================
     # ORDERS
     # =====================
