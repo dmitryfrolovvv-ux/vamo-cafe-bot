@@ -40,6 +40,8 @@ class AdminStates(StatesGroup):
     edit_product = State()
 
     edit_product_action = State()
+    
+    waiting_new_price = State()
 
 # =========================
 # ADMIN MENU
@@ -209,6 +211,67 @@ def register_admin(dp, conn, cur, main_menu):
 
         await AdminStates.edit_product_action.set()
         
+    # =====================
+    # CHANGE PRICE
+    # =====================
+
+    @dp.message_handler(
+        lambda m: m.text == "💰 Change price",
+        state=AdminStates.edit_product_action
+    )
+    async def change_price_start(
+        message: types.Message
+    ):
+
+        await message.answer(
+            "💰 Send new price"
+        )
+
+        await AdminStates.waiting_new_price.set()
+
+    @dp.message_handler(
+        state=AdminStates.waiting_new_price
+    )
+    async def change_price_finish(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        try:
+
+            new_price = int(message.text)
+
+            data = await state.get_data()
+
+            product_name = data["product_name"]
+
+            cur.execute(
+                """
+                UPDATE products
+                SET price=%s
+                WHERE product_name=%s
+                """,
+                (
+                    new_price,
+                    product_name
+                )
+            )
+
+            conn.commit()
+
+            await message.answer(
+                "✅ Price updated",
+                reply_markup=admin_menu()
+            )
+
+            await state.finish()
+
+        except:
+
+            await message.answer(
+                "❌ Send number only"
+            )
+            
     # =====================
     # RESET
     # =====================
