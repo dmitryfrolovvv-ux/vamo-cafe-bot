@@ -23,6 +23,8 @@ class AdminStates(StatesGroup):
 
     add_product_price = State()
 
+    add_product_description = State()
+
     add_product_photo = State()
 
     deleting_category = State()
@@ -354,6 +356,23 @@ def register_admin(dp, conn, cur, main_menu):
         )
 
         await message.answer(
+            "📝 Enter product description"
+        )
+
+        await AdminStates.add_product_description.set()
+
+    # =====================
+    # PRODUCT DESCRIPTION
+    # =====================
+
+    @dp.message_handler(state=AdminStates.add_product_description)
+    async def add_product_description(message: types.Message, state: FSMContext):
+
+        await state.update_data(
+            description=message.text
+        )
+
+        await message.answer(
             "🖼 Send product photo"
         )
 
@@ -380,14 +399,16 @@ def register_admin(dp, conn, cur, main_menu):
                 INSERT INTO products(
                     category,
                     product_name,
+                    description,
                     price,
                     image
                 )
-                VALUES(%s,%s,%s,%s)
+                VALUES(%s,%s,%s,%s,%s)
                 """,
                 (
                     data["category"],
                     data["name"],
+                    data["description"],
                     data["price"],
                     photo_id
                 )
