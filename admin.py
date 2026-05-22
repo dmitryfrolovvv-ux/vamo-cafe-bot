@@ -34,6 +34,8 @@ class AdminStates(StatesGroup):
     edit_category_banner = State()
 
     waiting_banner_photo = State()
+    
+    remove_category_banner = State()
 
 # =========================
 # ADMIN MENU
@@ -56,7 +58,8 @@ def admin_menu():
     )
     
     kb.add(
-    KeyboardButton("🖼 Edit category banner")
+        KeyboardButton("🖼 Edit category banner")
+        KeyboardButton("📂 Category editor")
     )
 
     kb.add(
@@ -524,7 +527,7 @@ def register_admin(dp, conn, cur, main_menu):
 
         await state.finish()
         
-         # =====================
+    # =====================
     # EDIT CATEGORY BANNER
     # =====================
 
@@ -649,7 +652,108 @@ def register_admin(dp, conn, cur, main_menu):
             await message.answer(str(e))
 
         await state.finish()
-    
+        
+    # =====================
+    # CATEGORY EDITOR
+    # =====================
+
+    @dp.message_handler(
+        lambda m: m.text == "📂 Category editor",
+        state="*"
+    )
+    async def category_editor(
+        message: types.Message
+    ):
+
+        kb = ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
+
+        kb.add(
+            KeyboardButton("🖼 Change banner")
+        )
+
+        kb.add(
+            KeyboardButton("🗑 Remove banner")
+        )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+
+        await message.answer(
+            "📂 Category editor",
+            reply_markup=kb
+        )
+        
+    # =====================
+    # REMOVE CATEGORY BANNER
+    # =====================
+
+    @dp.message_handler(
+        lambda m: m.text == "🗑 Remove banner",
+        state="*"
+    )
+    async def remove_banner_start(
+        message: types.Message
+    ):
+
+        cur.execute(
+            """
+            SELECT name
+            FROM categories
+            """
+        )
+
+        categories = cur.fetchall()
+
+        kb = ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
+
+        for category in categories:
+
+            kb.add(
+                KeyboardButton(category[0])
+            )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+
+        await message.answer(
+            "🗑 Choose category",
+            reply_markup=kb
+        )
+
+        await AdminStates.remove_category_banner.set()
+
+    @dp.message_handler(
+        state=AdminStates.remove_category_banner
+    )
+    async def remove_banner_finish(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        cur.execute(
+            """
+            UPDATE categories
+            SET image=NULL
+            WHERE name=%s
+            """,
+            (message.text,)
+        )
+
+        conn.commit()
+
+        await message.answer(
+            "✅ Banner removed",
+            reply_markup=admin_menu()
+        )
+
+        await state.finish()    
+        
     # =====================
     # ORDERS
     # =====================
