@@ -11,10 +11,10 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import (
-    ReplyKeyboardMarkup,
-    KeyboardButton,
     InlineKeyboardMarkup,
-    InlineKeyboardButton
+    InlineKeyboardButton,
+    ReplyKeyboardMarkup,
+    KeyboardButton
 )
 
 # =========================
@@ -86,20 +86,19 @@ CREATE TABLE IF NOT EXISTS orders(
 
 conn.commit()
 
-
-
 # =========================
-# MENU
+# INLINE MAIN MENU
 # =========================
 
-def main_menu():
+def inline_main_menu():
 
-    kb = ReplyKeyboardMarkup(
-        resize_keyboard=True
-    )
+    kb = InlineKeyboardMarkup(row_width=1)
 
     cur.execute(
-        "SELECT name FROM categories"
+        """
+        SELECT name
+        FROM categories
+        """
     )
 
     categories = cur.fetchall()
@@ -107,27 +106,53 @@ def main_menu():
     for category in categories:
 
         kb.add(
-            KeyboardButton(category[0])
+            InlineKeyboardButton(
+                text=category[0],
+                callback_data=f"category_{category[0]}"
+            )
         )
 
     kb.add(
-        KeyboardButton("🛒 Cart")
+        InlineKeyboardButton(
+            text="🛒 Cart",
+            callback_data="open_cart"
+        )
     )
 
     return kb
-    
+
+# =========================
+# SIMPLE MENU FOR ADMIN
+# =========================
+
+def simple_menu():
+
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
+
+    kb.add(
+        KeyboardButton("/start")
+    )
+
+    return kb
+
+# =========================
+# REGISTER ADMIN
+# =========================
+
 register_admin(
     dp,
     conn,
     cur,
-    main_menu
+    simple_menu
 )
 
 # =========================
-# START
+# RESET
 # =========================
 
-@dp.message_handler(lambda m: "reset" in m.text, state="*")
+@dp.message_handler(lambda m: "reset" in m.text.lower(), state="*")
 async def reset_btn(message: types.Message, state: FSMContext):
 
     if message.from_user.id != ADMIN_ID:
@@ -136,54 +161,34 @@ async def reset_btn(message: types.Message, state: FSMContext):
     await state.finish()
 
     await message.answer(
-        "✅ State reset",
-        reply_markup=main_menu()
+        "✅ State reset"
     )
+
+# =========================
+# START
+# =========================
 
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
 
     await message.answer(
         "🍔 Welcome to VAMO Cafe",
-        reply_markup=main_menu()
+        reply_markup=inline_main_menu()
     )
 
-def get_categories():
+# =========================
+# CATEGORY
+# =========================
 
-    cur.execute(
-        "SELECT name FROM categories"
+@dp.callback_query_handler(
+    lambda c: c.data.startswith("category_")
+)
+async def category_callback(callback: types.CallbackQuery):
+
+    category = callback.data.replace(
+        "category_",
+        ""
     )
-
-    return [x[0] for x in cur.fetchall()]
-    
-@dp.message_handler(lambda m: m.text in get_categories())
-async def category_handler(message: types.Message):
-
-    text = message.text
-
-    # =====================
-    # IGNORE CART
-    # =====================
-
-    if text == "🛒 Cart":
-        return
-
-    # =====================
-    # BACK
-    # =====================
-
-    if text == "⬅ Back":
-
-        await message.answer(
-            "🏠 Main menu",
-            reply_markup=main_menu()
-        )
-
-        return
-
-    # =====================
-    # CATEGORY
-    # =====================
 
     cur.execute(
         """
@@ -191,65 +196,75 @@ async def category_handler(message: types.Message):
         FROM products
         WHERE category=%s
         """,
-        (text,)
+        (category,)
     )
 
-    category_products = cur.fetchall()
+    products = cur.fetchall()
 
-    if category_products:
+    if not products:
 
-        kb = ReplyKeyboardMarkup(
-            resize_keyboard=True
-        )
-
-        for product in category_products:
-
-            name = product[0]
-
-            price = product[1]
-
-            image = product[2]
-
-            inline_kb = InlineKeyboardMarkup()
-
-            inline_kb.add(
-                InlineKeyboardButton(
-                    text="➕ Add to cart",
-                    callback_data=f"add_{name}"
-                )
-            )
-
-            if image:
-
-                await bot.send_photo(
-                    message.chat.id,
-                    photo=image,
-                    caption=f"🍽 {name}\n\n💰 {price} TL",
-                    reply_markup=inline_kb
-                )
-
-            else:
-
-                await message.answer(
-                    f"🍽 {name}\n\n💰 {price} TL",
-                    reply_markup=inline_kb
-                )
-
-        kb.add(
-            KeyboardButton("⬅ Back")
-        )
-
-        await message.answer(
-            "⬇ Choose product",
-            reply_markup=kb
+        await callback.answer(
+            "❌ No products",
+            show_alert=True
         )
 
         return
 
-@dp.callback_query_handler(lambda c: c.data.startswith("add_"))
+    for product in products:
+
+        name = product[0]
+
+        price = product[1]
+
+        image = product[2]
+
+        kb = InlineKeyboardMarkup(row_width=1)
+
+        kb.add(
+            InlineKeyboardButton(
+                text="➕ Add to cart",
+                callback_data=f"add_{name}"
+            )
+        )
+
+        kb.add(
+            InlineKeyboardButton(
+                text="⬅ Back",
+                callback_data="back_main"
+            )
+        )
+
+        if image:
+
+            await bot.send_photo(
+                callback.message.chat.id,
+                photo=image,
+                caption=f"🍽 {name}\n\n💰 {price} TL",
+                reply_markup=kb
+            )
+
+        else:
+
+            await callback.message.answer(
+                f"🍽 {name}\n\n💰 {price} TL",
+                reply_markup=kb
+            )
+
+    await callback.answer()
+
+# =========================
+# ADD TO CART
+# =========================
+
+@dp.callback_query_handler(
+    lambda c: c.data.startswith("add_")
+)
 async def add_to_cart_callback(callback: types.CallbackQuery):
 
-    product_name = callback.data.replace("add_", "")
+    product_name = callback.data.replace(
+        "add_",
+        ""
+    )
 
     user_id = callback.from_user.id
 
@@ -298,138 +313,156 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
     )
 
 # =========================
-# UNIVERSAL
+# OPEN CART
 # =========================
 
-@dp.message_handler(state=None)
-async def universal(message: types.Message):
+@dp.callback_query_handler(
+    lambda c: c.data == "open_cart"
+)
+async def open_cart(callback: types.CallbackQuery):
 
-    text = message.text
+    user_id = callback.from_user.id
 
-    # =====================
-    # BACK
-    # =====================
-
-    if text == "⬅ Back":
-
-        await message.answer(
-            "⬅ Main menu",
-            reply_markup=main_menu()
-        )
-
-        return
-
-    # =====================
-    # CART
-    # =====================
-
-    if text == "🛒 Cart":
-
-        user_id = message.from_user.id
-
-        cur.execute("""
+    cur.execute(
+        """
         SELECT product_name, price
         FROM cart
         WHERE user_id=%s
-        """, (user_id,))
+        """,
+        (user_id,)
+    )
 
-        items = cur.fetchall()
+    items = cur.fetchall()
 
-        if not items:
+    if not items:
 
-            await message.answer(
-                "🛒 Cart is empty"
-            )
-
-            return
-
-        total = 0
-
-        cart_text = "🛒 YOUR CART\n\n"
-
-        for item in items:
-
-            cart_text += f"• {item[0]} — {item[1]} TL\n"
-
-            total += item[1]
-
-        cart_text += f"\n💰 Total: {total} TL"
-
-        kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-        kb.add(
-            KeyboardButton("✅ Checkout")
-        )
-
-        kb.add(
-            KeyboardButton("❌ Clear cart")
-        )
-
-        kb.add(
-            KeyboardButton("⬅ Back")
-        )
-
-        await message.answer(
-            cart_text,
-            reply_markup=kb
+        await callback.answer(
+            "🛒 Cart is empty",
+            show_alert=True
         )
 
         return
 
-    # =====================
-    # CLEAR CART
-    # =====================
+    text = "🛒 YOUR CART\n\n"
 
-    if text == "❌ Clear cart":
+    total = 0
 
-        user_id = message.from_user.id
+    for item in items:
 
-        cur.execute("""
+        text += f"• {item[0]} — {item[1]} TL\n"
+
+        total += item[1]
+
+    text += f"\n💰 Total: {total} TL"
+
+    kb = InlineKeyboardMarkup(row_width=1)
+
+    kb.add(
+        InlineKeyboardButton(
+            text="✅ Checkout",
+            callback_data="checkout"
+        )
+    )
+
+    kb.add(
+        InlineKeyboardButton(
+            text="🗑 Clear cart",
+            callback_data="clear_cart"
+        )
+    )
+
+    kb.add(
+        InlineKeyboardButton(
+            text="⬅ Back",
+            callback_data="back_main"
+        )
+    )
+
+    await callback.message.answer(
+        text,
+        reply_markup=kb
+    )
+
+    await callback.answer()
+
+# =========================
+# CLEAR CART
+# =========================
+
+@dp.callback_query_handler(
+    lambda c: c.data == "clear_cart"
+)
+async def clear_cart(callback: types.CallbackQuery):
+
+    user_id = callback.from_user.id
+
+    cur.execute(
+        """
         DELETE FROM cart
         WHERE user_id=%s
-        """, (user_id,))
+        """,
+        (user_id,)
+    )
 
-        conn.commit()
+    conn.commit()
 
-        await message.answer(
-            "🗑 Cart cleared",
-            reply_markup=main_menu()
+    await callback.answer(
+        "🗑 Cart cleared"
+    )
+
+    await callback.message.answer(
+        "🏠 Main menu",
+        reply_markup=inline_main_menu()
+    )
+
+# =========================
+# BACK MAIN
+# =========================
+
+@dp.callback_query_handler(
+    lambda c: c.data == "back_main"
+)
+async def back_main(callback: types.CallbackQuery):
+
+    await callback.message.answer(
+        "🏠 Main menu",
+        reply_markup=inline_main_menu()
+    )
+
+    await callback.answer()
+
+# =========================
+# CHECKOUT
+# =========================
+
+@dp.callback_query_handler(
+    lambda c: c.data == "checkout"
+)
+async def checkout_start(callback: types.CallbackQuery):
+
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
+
+    kb.add(
+        KeyboardButton(
+            "📍 Send location",
+            request_location=True
         )
+    )
 
-        return
+    kb.add(
+        KeyboardButton("⏭ Skip")
+    )
 
-    # =====================
-    # CHECKOUT
-    # =====================
+    await callback.message.answer(
+        "📍 Send location or skip",
+        reply_markup=kb
+    )
 
-    if text == "✅ Checkout":
+    await Checkout.address.set()
 
-        kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-        kb.add(
-            KeyboardButton(
-                "📍 Send location",
-                request_location=True
-            )
-        )
-
-        kb.add(
-            KeyboardButton("⏭ Skip")
-        )
-
-        await message.answer(
-            "📍 Send location or skip",
-            reply_markup=kb
-        )
-
-        await Checkout.address.set()
-
-        return
-
-    # =====================
-    # ADD PRODUCT
-    # =====================
-
+    await callback.answer()
 
 # =========================
 # LOCATION
@@ -545,11 +578,14 @@ async def checkout_comment(
 
         user_id = message.from_user.id
 
-        cur.execute("""
-        SELECT product_name, price
-        FROM cart
-        WHERE user_id=%s
-        """, (user_id,))
+        cur.execute(
+            """
+            SELECT product_name, price
+            FROM cart
+            WHERE user_id=%s
+            """,
+            (user_id,)
+        )
 
         items = cur.fetchall()
 
@@ -596,27 +632,33 @@ async def checkout_comment(
             text
         )
 
-        cur.execute("""
-        INSERT INTO orders(
-            user_id,
-            order_text
+        cur.execute(
+            """
+            INSERT INTO orders(
+                user_id,
+                order_text
+            )
+            VALUES(%s,%s)
+            """,
+            (
+                user_id,
+                text
+            )
         )
-        VALUES(%s,%s)
-        """, (
-            user_id,
-            text
-        ))
 
-        cur.execute("""
-        DELETE FROM cart
-        WHERE user_id=%s
-        """, (user_id,))
+        cur.execute(
+            """
+            DELETE FROM cart
+            WHERE user_id=%s
+            """,
+            (user_id,)
+        )
 
         conn.commit()
 
         await message.answer(
             "✅ Order sent successfully!",
-            reply_markup=main_menu()
+            reply_markup=inline_main_menu()
         )
 
         await state.finish()
@@ -626,7 +668,6 @@ async def checkout_comment(
         conn.rollback()
 
         await message.answer(str(e))
-
 
 # =========================
 # RUN
@@ -644,5 +685,6 @@ if __name__ == "__main__":
         dp,
         skip_updates=True,
         timeout=60,
-        relax=0.1
+        relax=0.1,
+        fast=True
     )
