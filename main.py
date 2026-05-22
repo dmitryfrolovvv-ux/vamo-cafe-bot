@@ -95,6 +95,26 @@ try:
 
 except:
     conn.rollback()
+    
+try:
+    cur.execute("""
+        ALTER TABLE categories
+        ADD COLUMN image TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
+
+try:
+    cur.execute("""
+        ALTER TABLE categories
+        ADD COLUMN description TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
 
 # =========================
 # INLINE MAIN MENU
