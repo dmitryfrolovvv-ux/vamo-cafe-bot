@@ -532,9 +532,13 @@ def register_admin(dp, conn, cur, main_menu):
     # =====================
 
     @dp.message_handler(
-        lambda m: m.text == "🖼 Edit category banner",
-        state="*"
-    )
+    lambda m: (
+        m.text == "🖼 Edit category banner"
+        or
+        m.text == "🖼 Change banner"
+    ),
+    state="*"
+)
     async def edit_category_banner_start(
         message: types.Message,
         state: FSMContext
