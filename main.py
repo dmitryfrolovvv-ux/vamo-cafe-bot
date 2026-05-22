@@ -5,9 +5,6 @@
 import logging
 import psycopg2
 
-from flask import Flask
-from threading import Thread
-
 from aiogram import Bot, Dispatcher, executor, types
 from admin import register_admin
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -46,19 +43,9 @@ dp = Dispatcher(bot, storage=storage)
 # FLASK
 # =========================
 
-app = Flask('')
 
-
-@app.route('/')
-def home():
-    return "Bot is running"
-
-
-def run_web():
     app.run(host='0.0.0.0', port=10000)
 
-
-def keep_alive():
     t = Thread(target=run_web)
     t.start()
 
@@ -667,9 +654,15 @@ def run_web():
 
 if __name__ == "__main__":
 
-    keep_alive()
+    import asyncio
+
+    asyncio.set_event_loop_policy(
+        asyncio.DefaultEventLoopPolicy()
+    )
 
     executor.start_polling(
         dp,
-        skip_updates=True
+        skip_updates=True,
+        timeout=60,
+        relax=0.1
     )
