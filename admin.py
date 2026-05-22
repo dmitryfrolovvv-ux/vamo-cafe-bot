@@ -48,11 +48,6 @@ def admin_menu():
     )
 
     kb.add(
-        KeyboardButton("➕ Add category"),
-        KeyboardButton("❌ Delete category")
-    )
-
-    kb.add(
         KeyboardButton("➕ Add product"),
         KeyboardButton("❌ Delete product")
     )
@@ -673,11 +668,13 @@ def register_admin(dp, conn, cur, main_menu):
         )
 
         kb.add(
-            KeyboardButton("🖼 Change banner")
+    KeyboardButton("➕ Add category"),
+    KeyboardButton("❌ Delete category")
         )
 
         kb.add(
-            KeyboardButton("🗑 Remove banner")
+    KeyboardButton("🖼 Change banner"),
+    KeyboardButton("🗑 Remove banner")
         )
 
         kb.add(
