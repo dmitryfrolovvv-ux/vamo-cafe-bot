@@ -44,6 +44,10 @@ class AdminStates(StatesGroup):
     waiting_new_price = State()
     
     waiting_new_name = State()
+    
+    waiting_new_description = State()
+    
+    waiting_new_photo = State()
 
 # =========================
 # ADMIN MENU
@@ -326,7 +330,114 @@ def register_admin(dp, conn, cur, main_menu):
         )
 
         await state.finish()
+        
+    # =====================
+    # CHANGE DESCRIPTION
+    # =====================
 
+    @dp.message_handler(
+        lambda m: m.text == "📄 Change description",
+        state=AdminStates.edit_product_action
+    )
+    async def change_description_start(
+        message: types.Message
+    ):
+
+        await message.answer(
+            "📄 Send new description"
+        )
+
+        await AdminStates.waiting_new_description.set()
+
+    @dp.message_handler(
+        state=AdminStates.waiting_new_description
+    )
+    async def change_description_finish(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        new_description = message.text
+
+        data = await state.get_data()
+
+        product_name = data["product_name"]
+
+        cur.execute(
+            """
+            UPDATE products
+            SET description=%s
+            WHERE product_name=%s
+            """,
+            (
+                new_description,
+                product_name
+            )
+        )
+
+        conn.commit()
+
+        await message.answer(
+            "✅ Description updated",
+            reply_markup=admin_menu()
+        )
+
+        await state.finish()
+        
+    # =====================
+    # CHANGE PHOTO
+    # =====================
+
+    @dp.message_handler(
+        lambda m: m.text == "🖼 Change photo",
+        state=AdminStates.edit_product_action
+    )
+    async def change_photo_start(
+        message: types.Message
+    ):
+
+        await message.answer(
+            "🖼 Send new product photo"
+        )
+
+        await AdminStates.waiting_new_photo.set()
+
+    @dp.message_handler(
+        content_types=types.ContentType.PHOTO,
+        state=AdminStates.waiting_new_photo
+    )
+    async def change_photo_finish(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        photo_id = message.photo[-1].file_id
+
+        data = await state.get_data()
+
+        product_name = data["product_name"]
+
+        cur.execute(
+            """
+            UPDATE products
+            SET image=%s
+            WHERE product_name=%s
+            """,
+            (
+                photo_id,
+                product_name
+            )
+        )
+
+        conn.commit()
+
+        await message.answer(
+            "✅ Product photo updated",
+            reply_markup=admin_menu()
+        )
+
+        await state.finish()
+        
     # =====================
     # RESET
     # =====================
