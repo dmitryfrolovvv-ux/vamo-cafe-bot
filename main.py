@@ -326,13 +326,32 @@ async def product_card(callback: types.CallbackQuery):
         )
     )
 
-    if image:
+if image:
 
-        await bot.send_photo(
-            callback.message.chat.id,
-            photo=image,
+    await bot.send_photo(
+        callback.message.chat.id,
+        photo=image,
+        caption=(
+            f"🍽 {name}\n\n"
+            f"📝 {description}\n\n"
+            f"💰 {price} TL"
+        ),
+        reply_markup=kb
+    )
+
+else:
+
+    await callback.message.answer(
+        (
+            f"🍽 {name}\n\n"
+            f"📝 {description}\n\n"
+            f"💰 {price} TL"
+        ),
+        reply_markup=kb
+    )
+
     await callback.answer()
-            
+
 # =========================
 # PLUS
 # =========================
