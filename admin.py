@@ -1100,7 +1100,7 @@ def register_admin(dp, conn, cur, main_menu):
         )
 
         await message.answer(
-            "📝 Enter product description"
+            "🖼 Send product photo"
         )
 
         await AdminStates.add_product_description.set()
