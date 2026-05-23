@@ -837,73 +837,6 @@ async def checkout_phone(
 # =========================
 # COMMENT
 # =========================
-
-@dp.message_handler(state=Checkout.comment)
-async def checkout_comment(
-    message: types.Message,
-    state: FSMContext
-):
-
-    try:
-
-        data = await state.get_data()
-
-        address = data["address"]
-
-        phone = data["phone"]
-
-        comment = message.text
-
-        user_id = message.from_user.id
-
-        cur.execute(
-            """
-            SELECT product_name, price
-            FROM cart
-            WHERE user_id=%s
-            """,
-            (user_id,)
-        )
-
-        items = cur.fetchall()
-
-        if not items:
-
-            await message.answer(
-                "❌ Cart is empty"
-            )
-
-            await state.finish()
-
-            return
-
-        username = message.from_user.username
-
-        if username:
-
-            mention = f"@{username}"
-
-        else:
-
-            mention = message.from_user.full_name
-
-        text = f"🚨 NEW ORDER {mention}\n\n"
-
-        total = 0
-
-        for item in items:
-
-            text += f"• {item[0]} — {item[1]} TL\n"
-
-            total += item[1]
-
-        text += f"\n💰 Total: {total} TL"
-
-        text += f"\n\n📍 Address:\n{address}"
-
-        text += f"\n\n📞 Phone:\n{phone}"
-
-        text += f"\n\n🚪 Comment:\n{comment}"
     
 @dp.message_handler(state=Checkout.comment)
 async def checkout_comment(
@@ -1049,53 +982,6 @@ async def checkout_comment(
         await message.answer(
             "❌ Order error"
         )
-cur.execute(
-    """
-    INSERT INTO orders(
-        order_text
-    )
-    VALUES(%s)
-    RETURNING id
-    """,
-    (order_text,)
-)
-
-order_id = cur.fetchone()[0]
-
-conn.commit()
-
-kb = InlineKeyboardMarkup(row_width=2)
-
-...
-
-await bot.send_message(
-    ADMIN_ID,
-    order_text,
-    reply_markup=kb
-)
-
-        cur.execute(
-            """
-            DELETE FROM cart
-            WHERE user_id=%s
-            """,
-            (user_id,)
-        )
-
-        conn.commit()
-
-        await message.answer(
-            "✅ Order sent successfully!",
-            reply_markup=inline_main_menu()
-        )
-
-        await state.finish()
-
-    except Exception as e:
-
-        conn.rollback()
-
-        await message.answer(str(e))
 
 # =========================
 # RUN
