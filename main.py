@@ -359,12 +359,12 @@ async def language_select(
 
     conn.commit()
 
-await callback.message.answer(
-    get_text(user_id, "welcome"),
-    reply_markup=inline_main_menu()
-)
+    await callback.message.answer(
+        get_text(user_id, "welcome"),
+        reply_markup=inline_main_menu()
+    )
 
-await callback.answer()
+    await callback.answer()
     
 # =========================
 # CATEGORY
