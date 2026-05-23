@@ -54,6 +54,14 @@ class AdminStates(StatesGroup):
     waiting_new_photo = State()
     
     waiting_new_category = State()
+    
+    editing_category_name = State()
+
+    editing_category_name_en = State()
+
+    editing_category_name_ru = State()
+
+    editing_category_name_tr = State()
 
 # =========================
 # ADMIN MENU
@@ -222,6 +230,149 @@ def register_admin(dp, conn, cur, main_menu):
         )
 
         await AdminStates.edit_product_action.set()
+        
+    # =====================
+    # EDIT CATEGORY NAME
+    # =====================
+
+    @dp.message_handler(
+        lambda m: m.text == "✏ Edit category name",
+        state="*"
+    )
+    async def edit_category_name_start(
+        message: types.Message
+    ):
+
+        cur.execute(
+            """
+            SELECT name
+            FROM categories
+            ORDER BY name
+            """
+        )
+
+        categories = cur.fetchall()
+
+        kb = ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
+
+        for category in categories:
+
+            kb.add(
+                KeyboardButton(category[0])
+            )
+
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+
+        await message.answer(
+            "📂 Choose category",
+            reply_markup=kb
+        )
+
+        await AdminStates.editing_category_name.set()
+
+    @dp.message_handler(
+        state=AdminStates.editing_category_name
+    )
+    async def edit_category_name_choose(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        await state.update_data(
+            old_category=message.text
+        )
+
+        await message.answer(
+            "🇬🇧 Enter new category name (EN)"
+        )
+
+        await AdminStates.editing_category_name_en.set()
+
+    @dp.message_handler(
+        state=AdminStates.editing_category_name_en
+    )
+    async def edit_category_name_en(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        await state.update_data(
+            name_en=message.text
+        )
+
+        await message.answer(
+            "🇷🇺 Enter new category name (RU)"
+        )
+
+        await AdminStates.editing_category_name_ru.set()
+
+    @dp.message_handler(
+        state=AdminStates.editing_category_name_ru
+    )
+    async def edit_category_name_ru(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        await state.update_data(
+            name_ru=message.text
+        )
+
+        await message.answer(
+            "🇹🇷 Enter new category name (TR)"
+        )
+
+        await AdminStates.editing_category_name_tr.set()
+
+    @dp.message_handler(
+        state=AdminStates.editing_category_name_tr
+    )
+    async def edit_category_name_tr(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        data = await state.get_data()
+
+        old_category = data["old_category"]
+
+        name_en = data["name_en"]
+
+        name_ru = data["name_ru"]
+
+        name_tr = message.text
+
+        cur.execute(
+            """
+            UPDATE categories
+            SET
+                name=%s,
+                name_en=%s,
+                name_ru=%s,
+                name_tr=%s
+            WHERE name=%s
+            """,
+            (
+                name_en,
+                name_en,
+                name_ru,
+                name_tr,
+                old_category
+            )
+        )
+
+        conn.commit()
+
+        await message.answer(
+            "✅ Category updated",
+            reply_markup=admin_menu()
+        )
+
+        await state.finish()
         
     # =====================
     # CHANGE PRICE
@@ -1150,7 +1301,8 @@ def register_admin(dp, conn, cur, main_menu):
 
         kb.add(
     KeyboardButton("➕ Add category"),
-    KeyboardButton("❌ Delete category")
+    KeyboardButton("❌ Delete category"),
+            
         )
 
         kb.add(
@@ -1159,7 +1311,8 @@ def register_admin(dp, conn, cur, main_menu):
         )
 
         kb.add(
-            KeyboardButton("⬅ Back")
+    KeyboardButton("✏ Edit category name"),
+    KeyboardButton("⬅ Back")
         )
 
         await message.answer(
