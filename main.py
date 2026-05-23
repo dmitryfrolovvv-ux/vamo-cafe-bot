@@ -982,7 +982,87 @@ async def checkout_comment(
         await message.answer(
             "❌ Order error"
         )
+        
+# =========================
+# ORDER STATUS
+# =========================
 
+@dp.callback_query_handler(
+    lambda c: c.data.startswith("status_")
+)
+async def order_status_callback(
+    callback: types.CallbackQuery
+):
+
+    data = callback.data.split("_")
+
+    status_type = data[1]
+
+    order_id = data[2]
+
+    if status_type == "preparing":
+
+        new_status = "🧑‍🍳 Preparing"
+
+    elif status_type == "delivery":
+
+        new_status = "🛵 Delivery"
+
+    elif status_type == "completed":
+
+        new_status = "✅ Completed"
+
+    elif status_type == "cancelled":
+
+        new_status = "❌ Cancelled"
+
+    else:
+
+        return
+
+    cur.execute(
+        """
+        UPDATE orders
+        SET status=%s
+        WHERE id=%s
+        """,
+        (
+            new_status,
+            order_id
+        )
+    )
+
+    conn.commit()
+
+    cur.execute(
+        """
+        SELECT user_id
+        FROM orders
+        WHERE id=%s
+        """,
+        (order_id,)
+    )
+
+    user = cur.fetchone()
+
+    if user:
+
+        user_id = user[0]
+
+        try:
+
+            await bot.send_message(
+                user_id,
+                f"📦 Order status updated:\n\n{new_status}"
+            )
+
+        except:
+            pass
+
+    await callback.answer(
+        f"✅ {new_status}"
+    )
+    
 # =========================
 # RUN
 # =========================
