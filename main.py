@@ -216,7 +216,38 @@ async def reset_btn(message: types.Message, state: FSMContext):
     await message.answer(
         "✅ State reset"
     )
+    
+# =========================
+# LANGUAGE MENU
+# =========================
 
+def language_menu():
+
+    kb = InlineKeyboardMarkup(row_width=1)
+
+    kb.add(
+        InlineKeyboardButton(
+            text="🇬🇧 English",
+            callback_data="lang_en"
+        )
+    )
+
+    kb.add(
+        InlineKeyboardButton(
+            text="🇷🇺 Русский",
+            callback_data="lang_ru"
+        )
+    )
+
+    kb.add(
+        InlineKeyboardButton(
+            text="🇹🇷 Türkçe",
+            callback_data="lang_tr"
+        )
+    )
+
+    return kb
+    
 # =========================
 # START
 # =========================
@@ -225,10 +256,66 @@ async def reset_btn(message: types.Message, state: FSMContext):
 async def start(message: types.Message):
 
     await message.answer(
-        "🍔 Welcome to VAMO Cafe",
+    "🌍 Choose language",
+    reply_markup=language_menu()
+)
+    
+# =========================
+# LANGUAGE SELECT
+# =========================
+
+@dp.callback_query_handler(
+    lambda c: c.data.startswith("lang_")
+)
+async def language_select(
+    callback: types.CallbackQuery
+):
+
+    language = callback.data.replace(
+        "lang_",
+        ""
+    )
+
+    user_id = callback.from_user.id
+
+    cur.execute(
+        """
+        INSERT INTO users(
+            user_id,
+            language
+        )
+        VALUES(%s,%s)
+        ON CONFLICT(user_id)
+        DO UPDATE SET language=%s
+        """,
+        (
+            user_id,
+            language,
+            language
+        )
+    )
+
+    conn.commit()
+
+    if language == "ru":
+
+        text = "🍔 Добро пожаловать в VAMO Cafe"
+
+    elif language == "tr":
+
+        text = "🍔 VAMO Cafe'ye hoşgeldiniz"
+
+    else:
+
+        text = "🍔 Welcome to VAMO Cafe"
+
+    await callback.message.answer(
+        text,
         reply_markup=inline_main_menu()
     )
 
+    await callback.answer()
+    
 # =========================
 # CATEGORY
 # =========================
