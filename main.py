@@ -364,7 +364,7 @@ await callback.message.answer(
     reply_markup=inline_main_menu()
 )
 
-    await callback.answer()
+await callback.answer()
     
 # =========================
 # CATEGORY
