@@ -975,8 +975,8 @@ def register_admin(dp, conn, cur, main_menu):
 
         await AdminStates.adding_product_name_en.set()
         
-        @dp.message_handler(
-        state=AdminStates.adding_product_name_en
+    @dp.message_handler(
+    state=AdminStates.adding_product_name_en
     )
     async def add_product_name_en(
         message: types.Message,
