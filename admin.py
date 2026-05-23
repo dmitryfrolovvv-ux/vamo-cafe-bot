@@ -15,7 +15,11 @@ ADMIN_ID = 1472777680
 
 class AdminStates(StatesGroup):
 
-    add_category = State()
+    adding_category_en = State()
+
+    adding_category_ru = State()
+
+    adding_category_tr = State()
 
     add_product_category = State()
 
@@ -553,48 +557,99 @@ def register_admin(dp, conn, cur, main_menu):
         )
 
     # =====================
-    # ADD CATEGORY
+    # ADD CATEGORY MULTILANGUAGE
     # =====================
 
-    @dp.message_handler(lambda m: m.text == "➕ Add category", state="*")
-    async def add_category_start(message: types.Message, state: FSMContext):
-
-        if message.from_user.id != ADMIN_ID:
-            return
-
-        await state.finish()
+    @dp.message_handler(
+        lambda m: m.text == "➕ Add category",
+        state="*"
+    )
+    async def add_category_start(
+        message: types.Message
+    ):
 
         await message.answer(
-            "🗂 Enter category name"
+            "🇬🇧 Enter category name (EN)"
         )
 
-        await AdminStates.add_category.set()
+        await AdminStates.adding_category_en.set()
 
-    @dp.message_handler(state=AdminStates.add_category)
-    async def add_category_finish(message: types.Message, state: FSMContext):
+    @dp.message_handler(
+        state=AdminStates.adding_category_en
+    )
+    async def add_category_en(
+        message: types.Message,
+        state: FSMContext
+    ):
 
-        try:
+        await state.update_data(
+            name_en=message.text
+        )
 
-            cur.execute(
-                """
-                INSERT INTO categories(name)
-                VALUES(%s)
-                """,
-                (message.text,)
+        await message.answer(
+            "🇷🇺 Enter category name (RU)"
+        )
+
+        await AdminStates.adding_category_ru.set()
+
+    @dp.message_handler(
+        state=AdminStates.adding_category_ru
+    )
+    async def add_category_ru(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        await state.update_data(
+            name_ru=message.text
+        )
+
+        await message.answer(
+            "🇹🇷 Enter category name (TR)"
+        )
+
+        await AdminStates.adding_category_tr.set()
+
+    @dp.message_handler(
+        state=AdminStates.adding_category_tr
+    )
+    async def add_category_tr(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        data = await state.get_data()
+
+        name_en = data["name_en"]
+
+        name_ru = data["name_ru"]
+
+        name_tr = message.text
+
+        cur.execute(
+            """
+            INSERT INTO categories(
+                name,
+                name_en,
+                name_ru,
+                name_tr
             )
-
-            conn.commit()
-
-            await message.answer(
-                "✅ Category added",
-                reply_markup=admin_menu()
+            VALUES(%s,%s,%s,%s)
+            """,
+            (
+                name_en,
+                name_en,
+                name_ru,
+                name_tr
             )
+        )
 
-        except Exception as e:
+        conn.commit()
 
-            conn.rollback()
-
-            await message.answer(str(e))
+        await message.answer(
+            "✅ Category added",
+            reply_markup=admin_menu()
+        )
 
         await state.finish()
 
