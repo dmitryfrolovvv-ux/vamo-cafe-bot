@@ -237,16 +237,42 @@ except:
 # INLINE MAIN MENU
 # =========================
 
-def inline_main_menu():
+def inline_main_menu(user_id=None):
 
     kb = InlineKeyboardMarkup(row_width=2)
 
-    cur.execute(
-        """
-        SELECT name
-        FROM categories
-        """
-    )
+    language = "en"
+
+    if user_id:
+
+        language = get_user_language(user_id)
+
+    if language == "ru":
+
+        cur.execute(
+            """
+            SELECT name, name_ru
+            FROM categories
+            """
+        )
+
+    elif language == "tr":
+
+        cur.execute(
+            """
+            SELECT name, name_tr
+            FROM categories
+            """
+        )
+
+    else:
+
+        cur.execute(
+            """
+            SELECT name, name_en
+            FROM categories
+            """
+        )
 
     categories = cur.fetchall()
 
@@ -254,10 +280,14 @@ def inline_main_menu():
 
     for category in categories:
 
+        original_name = category[0]
+
+        translated_name = category[1]
+
         buttons.append(
             InlineKeyboardButton(
-                text=category[0],
-                callback_data=f"category_{category[0]}"
+                text=translated_name,
+                callback_data=f"category_{original_name}"
             )
         )
 
@@ -265,13 +295,12 @@ def inline_main_menu():
 
     kb.row(
         InlineKeyboardButton(
-            text="🛒 Cart",
+            text=get_text(user_id, "cart"),
             callback_data="open_cart"
         )
     )
 
     return kb
-
 # =========================
 # SIMPLE MENU FOR ADMIN
 # =========================
@@ -459,7 +488,7 @@ async def language_select(
 
     await callback.message.answer(
         get_text(user_id, "welcome"),
-        reply_markup=inline_main_menu()
+        reply_markup=inline_main_menu(callback.from_user.id)
     )
 
     await callback.answer()
@@ -933,7 +962,7 @@ async def clear_cart(callback: types.CallbackQuery):
 
     await callback.message.answer(
         "🏠 Main menu",
-        reply_markup=inline_main_menu()
+        reply_markup=inline_main_menu(callback.from_user.id)
     )
 
 # =========================
@@ -947,7 +976,7 @@ async def back_main(callback: types.CallbackQuery):
 
     await callback.message.answer(
         "🏠 Main menu",
-        reply_markup=inline_main_menu()
+        reply_markup=inline_main_menu(callback.from_user.id)
     )
 
     await callback.answer()
@@ -1211,7 +1240,7 @@ async def checkout_comment(
 
         await message.answer(
             "✅ Order sent successfully!",
-            reply_markup=inline_main_menu()
+            reply_markup=inline_main_menu(message.from_user.id)
         )
 
         await state.finish()
