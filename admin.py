@@ -1083,18 +1083,6 @@ def register_admin(dp, conn, cur, main_menu):
 
         await AdminStates.adding_product_price.set()
         
-    @dp.message_handler(state=AdminStates.add_product_name)
-    async def add_product_name(message: types.Message, state: FSMContext):
-
-        await state.update_data(
-            name=message.text
-        )
-
-        await message.answer(
-            "💰 Enter product price"
-        )
-
-        await AdminStates.add_product_price.set()
 
     @dp.message_handler(state=AdminStates.add_product_price)
     async def add_product_price(message: types.Message, state: FSMContext):
@@ -1117,22 +1105,6 @@ def register_admin(dp, conn, cur, main_menu):
 
         await AdminStates.add_product_description.set()
 
-    # =====================
-    # PRODUCT DESCRIPTION
-    # =====================
-
-    @dp.message_handler(state=AdminStates.add_product_description)
-    async def add_product_description(message: types.Message, state: FSMContext):
-
-        await state.update_data(
-            description=message.text
-        )
-
-        await message.answer(
-            "🖼 Send product photo"
-        )
-
-        await AdminStates.add_product_photo.set()
 
     # =====================
     # PRODUCT PHOTO
