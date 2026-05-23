@@ -282,7 +282,7 @@ def inline_main_menu(user_id=None):
 
         original_name = category[0]
 
-        translated_name = category[1]
+        translated_name = category[1] or category[0]
 
         buttons.append(
             InlineKeyboardButton(
