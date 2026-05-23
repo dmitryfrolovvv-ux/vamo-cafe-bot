@@ -905,45 +905,150 @@ async def checkout_comment(
 
         text += f"\n\n🚪 Comment:\n{comment}"
     
-    except Exception as e:
+@dp.message_handler(state=Checkout.comment)
+async def checkout_comment(
+    message: types.Message,
+    state: FSMContext
+):
 
-    print(e)
+    try:
 
-    await message.answer(
-        "❌ Order error"
-    )
+        data = await state.get_data()
 
-kb = InlineKeyboardMarkup(row_width=2)
+        address = data["address"]
 
-kb.add(
-    InlineKeyboardButton(
-        text="🧑‍🍳 Preparing",
-        callback_data=f"status_preparing_{order_id}"
-    ),
+        phone = data["phone"]
 
-    InlineKeyboardButton(
-        text="🛵 Delivery",
-        callback_data=f"status_delivery_{order_id}"
-    )
-)
+        comment = message.text
 
-kb.add(
-    InlineKeyboardButton(
-        text="✅ Completed",
-        callback_data=f"status_completed_{order_id}"
-    ),
+        user_id = message.from_user.id
 
-    InlineKeyboardButton(
-        text="❌ Cancelled",
-        callback_data=f"status_cancelled_{order_id}"
-    )
-)
+        cur.execute(
+            """
+            SELECT product_name, price
+            FROM cart
+            WHERE user_id=%s
+            """,
+            (user_id,)
+        )
+
+        items = cur.fetchall()
+
+        if not items:
+
+            await message.answer(
+                "❌ Cart is empty"
+            )
+
+            await state.finish()
+
+            return
+
+        username = message.from_user.username
+
+        if username:
+
+            mention = f"@{username}"
+
+        else:
+
+            mention = message.from_user.full_name
+
+        order_text = f"🚨 NEW ORDER {mention}\n\n"
+
+        total = 0
+
+        for item in items:
+
+            order_text += f"• {item[0]} — {item[1]} TL\n"
+
+            total += item[1]
+
+        order_text += f"\n💰 Total: {total} TL"
+
+        order_text += f"\n\n📍 Address:\n{address}"
+
+        order_text += f"\n\n📞 Phone:\n{phone}"
+
+        order_text += f"\n\n🚪 Comment:\n{comment}"
+
+        cur.execute(
+            """
+            INSERT INTO orders(
+                user_id,
+                order_text
+            )
+            VALUES(%s,%s)
+            RETURNING id
+            """,
+            (
+                user_id,
+                order_text
+            )
+        )
+
+        order_id = cur.fetchone()[0]
+
+        conn.commit()
+
+        kb = InlineKeyboardMarkup(row_width=2)
+
+        kb.add(
+            InlineKeyboardButton(
+                text="🧑‍🍳 Preparing",
+                callback_data=f"status_preparing_{order_id}"
+            ),
+
+            InlineKeyboardButton(
+                text="🛵 Delivery",
+                callback_data=f"status_delivery_{order_id}"
+            )
+        )
+
+        kb.add(
+            InlineKeyboardButton(
+                text="✅ Completed",
+                callback_data=f"status_completed_{order_id}"
+            ),
+
+            InlineKeyboardButton(
+                text="❌ Cancelled",
+                callback_data=f"status_cancelled_{order_id}"
+            )
+        )
 
         await bot.send_message(
-    ADMIN_ID,
-    order_text,
-    reply_markup=kb
-)
+            ADMIN_ID,
+            order_text,
+            reply_markup=kb
+        )
+
+        cur.execute(
+            """
+            DELETE FROM cart
+            WHERE user_id=%s
+            """,
+            (user_id,)
+        )
+
+        conn.commit()
+
+        await message.answer(
+            "✅ Order sent successfully!",
+            reply_markup=inline_main_menu()
+        )
+
+        await state.finish()
+
+    except Exception as e:
+
+        conn.rollback()
+
+        print(e)
+
+        await message.answer(
+            "❌ Order error"
+        )
 cur.execute(
     """
     INSERT INTO orders(
