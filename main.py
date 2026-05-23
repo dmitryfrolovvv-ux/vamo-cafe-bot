@@ -134,7 +134,105 @@ try:
 
 except:
     conn.rollback()
+    
+# =========================
+# MULTILANGUAGE CATEGORIES
+# =========================
 
+try:
+    cur.execute("""
+        ALTER TABLE categories
+        ADD COLUMN name_en TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
+
+try:
+    cur.execute("""
+        ALTER TABLE categories
+        ADD COLUMN name_ru TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
+
+try:
+    cur.execute("""
+        ALTER TABLE categories
+        ADD COLUMN name_tr TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
+
+# =========================
+# MULTILANGUAGE PRODUCTS
+# =========================
+
+try:
+    cur.execute("""
+        ALTER TABLE products
+        ADD COLUMN product_name_en TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
+
+try:
+    cur.execute("""
+        ALTER TABLE products
+        ADD COLUMN product_name_ru TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
+
+try:
+    cur.execute("""
+        ALTER TABLE products
+        ADD COLUMN product_name_tr TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
+
+try:
+    cur.execute("""
+        ALTER TABLE products
+        ADD COLUMN description_en TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
+
+try:
+    cur.execute("""
+        ALTER TABLE products
+        ADD COLUMN description_ru TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
+
+try:
+    cur.execute("""
+        ALTER TABLE products
+        ADD COLUMN description_tr TEXT
+    """)
+    conn.commit()
+
+except:
+    conn.rollback()
+    
 # =========================
 # INLINE MAIN MENU
 # =========================
