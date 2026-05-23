@@ -24,6 +24,18 @@ class AdminStates(StatesGroup):
     add_product_category = State()
 
     add_product_name = State()
+    
+    adding_product_name_en = State()
+
+    adding_product_name_ru = State()
+    
+    adding_product_name_tr = State()
+    
+    adding_product_description_en = State()
+    
+    adding_product_description_ru = State()
+    
+    adding_product_description_tr = State()
 
     add_product_price = State()
 
@@ -958,11 +970,119 @@ def register_admin(dp, conn, cur, main_menu):
         )
 
         await message.answer(
-            "🍔 Enter product name"
+            "🇬🇧 Enter product name (EN)"
         )
 
-        await AdminStates.add_product_name.set()
+        await AdminStates.adding_product_name_en.set()
+        
+        @dp.message_handler(
+        state=AdminStates.adding_product_name_en
+    )
+    async def add_product_name_en(
+        message: types.Message,
+        state: FSMContext
+    ):
 
+        await state.update_data(
+            product_name_en=message.text
+        )
+
+        await message.answer(
+            "🇷🇺 Enter product name (RU)"
+        )
+
+        await AdminStates.adding_product_name_ru.set()
+
+    @dp.message_handler(
+        state=AdminStates.adding_product_name_ru
+    )
+    async def add_product_name_ru(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        await state.update_data(
+            product_name_ru=message.text
+        )
+
+        await message.answer(
+            "🇹🇷 Enter product name (TR)"
+        )
+
+        await AdminStates.adding_product_name_tr.set()
+
+    @dp.message_handler(
+        state=AdminStates.adding_product_name_tr
+    )
+    async def add_product_name_tr(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        await state.update_data(
+            product_name_tr=message.text
+        )
+
+        await message.answer(
+            "🇬🇧 Enter description (EN)"
+        )
+
+        await AdminStates.adding_product_description_en.set()
+
+    @dp.message_handler(
+        state=AdminStates.adding_product_description_en
+    )
+    async def add_product_description_en(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        await state.update_data(
+            description_en=message.text
+        )
+
+        await message.answer(
+            "🇷🇺 Enter description (RU)"
+        )
+
+        await AdminStates.adding_product_description_ru.set()
+
+    @dp.message_handler(
+        state=AdminStates.adding_product_description_ru
+    )
+    async def add_product_description_ru(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        await state.update_data(
+            description_ru=message.text
+        )
+
+        await message.answer(
+            "🇹🇷 Enter description (TR)"
+        )
+
+        await AdminStates.adding_product_description_tr.set()
+
+    @dp.message_handler(
+        state=AdminStates.adding_product_description_tr
+    )
+    async def add_product_description_tr(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        await state.update_data(
+            description_tr=message.text
+        )
+
+        await message.answer(
+            "💰 Enter product price"
+        )
+
+        await AdminStates.adding_product_price.set()
+        
     @dp.message_handler(state=AdminStates.add_product_name)
     async def add_product_name(message: types.Message, state: FSMContext):
 
