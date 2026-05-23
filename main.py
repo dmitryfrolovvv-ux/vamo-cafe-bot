@@ -67,6 +67,14 @@ class Checkout(StatesGroup):
 # =========================
 
 cur.execute("""
+CREATE TABLE IF NOT EXISTS users(
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT UNIQUE,
+    language TEXT DEFAULT 'en'
+)
+""")
+
+cur.execute("""
 CREATE TABLE IF NOT EXISTS cart(
     id SERIAL PRIMARY KEY,
     user_id BIGINT,
