@@ -1081,7 +1081,7 @@ def register_admin(dp, conn, cur, main_menu):
             "💰 Enter product price"
         )
 
-        await AdminStates.adding_product_price.set()
+        await AdminStates.add_product_price.set()
         
 
     @dp.message_handler(state=AdminStates.add_product_price)
