@@ -218,9 +218,71 @@ async def reset_btn(message: types.Message, state: FSMContext):
     )
     
 # =========================
+# TEXTS
+# =========================
+
+TEXTS = {
+
+    "welcome": {
+
+        "en": "🍔 Welcome to VAMO Cafe",
+
+        "ru": "🍔 Добро пожаловать в VAMO Cafe",
+
+        "tr": "🍔 VAMO Cafe'ye hoşgeldiniz"
+    },
+
+    "cart": {
+
+        "en": "🛒 Cart",
+
+        "ru": "🛒 Корзина",
+
+        "tr": "🛒 Sepet"
+    },
+
+    "main_menu": {
+
+        "en": "🏠 Main menu",
+
+        "ru": "🏠 Главное меню",
+
+        "tr": "🏠 Ana Menü"
+    }
+}
+
+# =========================
 # LANGUAGE MENU
 # =========================
 
+def get_user_language(user_id):
+
+    cur.execute(
+        """
+        SELECT language
+        FROM users
+        WHERE user_id=%s
+        """,
+        (user_id,)
+    )
+
+    user = cur.fetchone()
+
+    if user:
+
+        return user[0]
+
+    return "en"
+
+
+def get_text(user_id, key):
+
+    language = get_user_language(user_id)
+
+    return TEXTS[key].get(
+        language,
+        TEXTS[key]["en"]
+    )
 def language_menu():
 
     kb = InlineKeyboardMarkup(row_width=1)
@@ -297,22 +359,10 @@ async def language_select(
 
     conn.commit()
 
-    if language == "ru":
-
-        text = "🍔 Добро пожаловать в VAMO Cafe"
-
-    elif language == "tr":
-
-        text = "🍔 VAMO Cafe'ye hoşgeldiniz"
-
-    else:
-
-        text = "🍔 Welcome to VAMO Cafe"
-
-    await callback.message.answer(
-        text,
-        reply_markup=inline_main_menu()
-    )
+await callback.message.answer(
+    get_text(user_id, "welcome"),
+    reply_markup=inline_main_menu()
+)
 
     await callback.answer()
     
