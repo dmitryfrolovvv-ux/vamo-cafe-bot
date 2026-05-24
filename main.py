@@ -604,59 +604,59 @@ async def product_card(callback: types.CallbackQuery):
     )
 
     language = get_user_language(
-    callback.from_user.id
-)
-
-if language == "ru":
-
-    cur.execute(
-        """
-        SELECT
-            product_name,
-            product_name_ru,
-            description_ru,
-            price,
-            image,
-            category
-        FROM products
-        WHERE product_name=%s
-        """,
-        (product_name,)
+        callback.from_user.id
     )
 
-elif language == "tr":
+    if language == "ru":
 
-    cur.execute(
-        """
-        SELECT
-            product_name,
-            product_name_tr,
-            description_tr,
-            price,
-            image,
-            category
-        FROM products
-        WHERE product_name=%s
-        """,
-        (product_name,)
-    )
+        cur.execute(
+            """
+            SELECT
+                product_name,
+                product_name_ru,
+                description_ru,
+                price,
+                image,
+                category
+            FROM products
+            WHERE product_name=%s
+            """,
+            (product_name,)
+        )
 
-else:
+    elif language == "tr":
 
-    cur.execute(
-        """
-        SELECT
-            product_name,
-            product_name_en,
-            description_en,
-            price,
-            image,
-            category
-        FROM products
-        WHERE product_name=%s
-        """,
-        (product_name,)
-    )
+        cur.execute(
+            """
+            SELECT
+                product_name,
+                product_name_tr,
+                description_tr,
+                price,
+                image,
+                category
+            FROM products
+            WHERE product_name=%s
+            """,
+            (product_name,)
+        )
+
+    else:
+
+        cur.execute(
+            """
+            SELECT
+                product_name,
+                product_name_en,
+                description_en,
+                price,
+                image,
+                category
+            FROM products
+            WHERE product_name=%s
+            """,
+            (product_name,)
+        )
 
     product = cur.fetchone()
 
@@ -670,15 +670,15 @@ else:
         return
 
     original_name = product[0]
-    
+
     name = product[1] or product[0]
-    
+
     description = product[2] or ""
-    
+
     price = product[3]
-    
+
     image = product[4]
-    
+
     category = product[5]
 
     count = 1
