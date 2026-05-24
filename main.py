@@ -603,9 +603,55 @@ async def product_card(callback: types.CallbackQuery):
         ""
     )
 
+    language = get_user_language(
+    callback.from_user.id
+)
+
+if language == "ru":
+
     cur.execute(
         """
-        SELECT product_name, description, price, image, category
+        SELECT
+            product_name,
+            product_name_ru,
+            description_ru,
+            price,
+            image,
+            category
+        FROM products
+        WHERE product_name=%s
+        """,
+        (product_name,)
+    )
+
+elif language == "tr":
+
+    cur.execute(
+        """
+        SELECT
+            product_name,
+            product_name_tr,
+            description_tr,
+            price,
+            image,
+            category
+        FROM products
+        WHERE product_name=%s
+        """,
+        (product_name,)
+    )
+
+else:
+
+    cur.execute(
+        """
+        SELECT
+            product_name,
+            product_name_en,
+            description_en,
+            price,
+            image,
+            category
         FROM products
         WHERE product_name=%s
         """,
@@ -623,11 +669,17 @@ async def product_card(callback: types.CallbackQuery):
 
         return
 
-    name = product[0]
-    description = product[1]
-    price = product[2]
-    image = product[3]
-    category = product[4]
+    original_name = product[0]
+    
+    name = product[1] or product[0]
+    
+    description = product[2] or ""
+    
+    price = product[3]
+    
+    image = product[4]
+    
+    category = product[5]
 
     count = 1
 
@@ -636,7 +688,7 @@ async def product_card(callback: types.CallbackQuery):
     kb.row(
         InlineKeyboardButton(
             text="➖",
-            callback_data=f"minus_{name}_{count}_{category}"
+            callback_data=f"minus_{original_name}_{count}_{category}"
         ),
 
         InlineKeyboardButton(
@@ -646,14 +698,14 @@ async def product_card(callback: types.CallbackQuery):
 
         InlineKeyboardButton(
             text="➕",
-            callback_data=f"plus_{name}_{count}_{category}"
+            callback_data=f"plus_{original_name}_{count}_{category}"
         )
     )
 
     kb.row(
         InlineKeyboardButton(
             text="🛒 Add to cart",
-            callback_data=f"add_{name}_{count}"
+            callback_data=f"add_{original_name}_{count}"
         )
     )
 
