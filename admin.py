@@ -563,56 +563,106 @@ def register_admin(dp, conn, cur, main_menu):
         await state.finish()
         
     # =====================
-    # CHANGE DESCRIPTION
+    # CHANGE DESCRIPTION MULTILANGUAGE
     # =====================
-
+    
     @dp.message_handler(
-        lambda m: m.text == "📄 Change description",
+        lambda m: m.text == "📝 Change description",
         state=AdminStates.edit_product_action
     )
     async def change_description_start(
         message: types.Message
     ):
-
+    
         await message.answer(
-            "📄 Send new description"
+            "🇬🇧 Enter new description (EN)"
         )
-
-        await AdminStates.waiting_new_description.set()
-
+    
+        await AdminStates.editing_product_description_en.set()
+    
+    
     @dp.message_handler(
-        state=AdminStates.waiting_new_description
+        state=AdminStates.editing_product_description_en
     )
-    async def change_description_finish(
+    async def change_description_en(
         message: types.Message,
         state: FSMContext
     ):
-
-        new_description = message.text
-
+    
+        await state.update_data(
+            description_en=message.text
+        )
+    
+        await message.answer(
+            "🇷🇺 Enter new description (RU)"
+        )
+    
+        await AdminStates.editing_product_description_ru.set()
+    
+    
+    @dp.message_handler(
+        state=AdminStates.editing_product_description_ru
+    )
+    async def change_description_ru(
+        message: types.Message,
+        state: FSMContext
+    ):
+    
+        await state.update_data(
+            description_ru=message.text
+        )
+    
+        await message.answer(
+            "🇹🇷 Enter new description (TR)"
+        )
+    
+        await AdminStates.editing_product_description_tr.set()
+    
+    
+    @dp.message_handler(
+        state=AdminStates.editing_product_description_tr
+    )
+    async def change_description_tr(
+        message: types.Message,
+        state: FSMContext
+    ):
+    
         data = await state.get_data()
-
+    
         product_name = data["product_name"]
-
+    
+        description_en = data["description_en"]
+    
+        description_ru = data["description_ru"]
+    
+        description_tr = message.text
+    
         cur.execute(
             """
             UPDATE products
-            SET description=%s
+            SET
+                description=%s,
+                description_en=%s,
+                description_ru=%s,
+                description_tr=%s
             WHERE product_name=%s
             """,
             (
-                new_description,
+                description_en,
+                description_en,
+                description_ru,
+                description_tr,
                 product_name
             )
         )
-
+    
         conn.commit()
-
+    
         await message.answer(
-            "✅ Description updated",
+            "✅ Descriptions updated",
             reply_markup=admin_menu()
         )
-
+    
         await state.finish()
         
     # =====================
