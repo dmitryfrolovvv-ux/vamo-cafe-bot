@@ -580,7 +580,7 @@ else:
 
     if not products:
 
-        await callback.answer(
+    await callback.answer(
             "❌ No products",
             show_alert=True
         )
