@@ -299,6 +299,13 @@ def inline_main_menu(user_id=None):
             callback_data="open_cart"
         )
     )
+    
+    kb.row(
+        InlineKeyboardButton(
+            text=get_text(user_id, "language_button"),
+            callback_data="change_language"
+        )
+    )
 
     return kb
 # =========================
@@ -421,6 +428,177 @@ TEXTS = {
     
         "tr": "✅ Sepete eklendi"
     
+    },
+    
+    "language_button": {
+
+        "en": "🌍 Language",
+    
+        "ru": "🌍 Язык",
+    
+        "tr": "🌍 Dil"
+    },
+    
+    "select_language": {
+    
+        "en": "🌍 Select language",
+    
+        "ru": "🌍 Выберите язык",
+    
+        "tr": "🌍 Dil seçin"
+    },
+    
+    "back": {
+    
+        "en": "⬅ Back",
+    
+        "ru": "⬅ Назад",
+    
+        "tr": "⬅ Geri"
+    },
+    
+    "add_to_cart": {
+    
+        "en": "🛒 Add to cart",
+    
+        "ru": "🛒 Добавить в корзину",
+    
+        "tr": "🛒 Sepete ekle"
+    },
+    
+    "checkout": {
+    
+        "en": "✅ Checkout",
+    
+        "ru": "✅ Оформить заказ",
+    
+        "tr": "✅ Sipariş ver"
+    },
+    
+    "clear_cart": {
+    
+        "en": "🗑 Clear cart",
+    
+        "ru": "🗑 Очистить корзину",
+    
+        "tr": "🗑 Sepeti temizle"
+    },
+    
+    "your_cart": {
+    
+        "en": "🛒 YOUR CART",
+    
+        "ru": "🛒 ВАША КОРЗИНА",
+    
+        "tr": "🛒 SEPETİNİZ"
+    },
+    
+    "total": {
+    
+        "en": "💰 Total",
+    
+        "ru": "💰 Итого",
+    
+        "tr": "💰 Toplam"
+    },
+    
+    "skip": {
+    
+        "en": "⏭ Skip",
+    
+        "ru": "⏭ Пропустить",
+    
+        "tr": "⏭ Geç"
+    },
+    
+    "send_phone": {
+    
+        "en": "📞 Enter phone number",
+    
+        "ru": "📞 Введите номер телефона",
+    
+        "tr": "📞 Telefon numarası girin"
+    },
+    
+    "send_comment": {
+    
+        "en": "🚪 Enter comment / door code",
+    
+        "ru": "🚪 Комментарий / код двери",
+    
+        "tr": "🚪 Yorum / kapı kodu"
+    },
+    
+    "send_location": {
+    
+        "en": "📍 Send location or skip",
+    
+        "ru": "📍 Отправьте локацию или пропустите",
+    
+        "tr": "📍 Konum gönderin veya geçin"
+    },
+    
+    "order_success": {
+    
+        "en": "✅ Order sent successfully!",
+    
+        "ru": "✅ Заказ успешно отправлен!",
+    
+        "tr": "✅ Sipariş başarıyla gönderildi!"
+    },
+    
+    "order_error": {
+    
+        "en": "❌ Order error",
+    
+        "ru": "❌ Ошибка заказа",
+    
+        "tr": "❌ Sipariş hatası"
+    },
+    
+    "status_updated": {
+    
+        "en": "📦 Order status updated",
+    
+        "ru": "📦 Статус заказа обновлен",
+    
+        "tr": "📦 Sipariş durumu güncellendi"
+    },
+    
+    "status_preparing": {
+    
+        "en": "🧑‍🍳 Preparing",
+    
+        "ru": "🧑‍🍳 Готовится",
+    
+        "tr": "🧑‍🍳 Hazırlanıyor"
+    },
+    
+    "status_delivery": {
+    
+        "en": "🛵 Delivery",
+    
+        "ru": "🛵 Доставка",
+    
+        "tr": "🛵 Teslimat"
+    },
+    
+    "status_completed": {
+    
+        "en": "✅ Completed",
+    
+        "ru": "✅ Завершен",
+    
+        "tr": "✅ Tamamlandı"
+    },
+    
+    "status_cancelled": {
+    
+        "en": "❌ Cancelled",
+    
+        "ru": "❌ Отменен",
+    
+        "tr": "❌ İptal edildi"
     }
 
 }
@@ -541,6 +719,27 @@ async def language_select(
     await callback.answer()
     
 # =========================
+# CHANGE LANGUAGE
+# =========================
+
+@dp.callback_query_handler(
+    lambda c: c.data == "change_language"
+)
+async def change_language(
+    callback: types.CallbackQuery
+):
+
+    await callback.message.answer(
+        get_text(
+            callback.from_user.id,
+            "select_language"
+        ),
+        reply_markup=language_menu()
+    )
+
+    await callback.answer()    
+    
+# =========================
 # CATEGORY
 # =========================
 
@@ -625,17 +824,59 @@ async def category_callback(callback: types.CallbackQuery):
 
     products_kb.row(
         InlineKeyboardButton(
-            text="⬅ Back",
+            text=get_text(callback.from_user.id, "back"),
             callback_data="back_main"
         )
     )
 
+    translated_category = category
+
+    if language == "ru":
+    
+        cur.execute(
+            """
+            SELECT name_ru
+            FROM categories
+            WHERE name=%s
+            """,
+            (category,)
+        )
+    
+    elif language == "tr":
+    
+        cur.execute(
+            """
+            SELECT name_tr
+            FROM categories
+            WHERE name=%s
+            """,
+            (category,)
+        )
+    
+    else:
+    
+        cur.execute(
+            """
+            SELECT name_en
+            FROM categories
+            WHERE name=%s
+            """,
+            (category,)
+        )
+    
+    cat = cur.fetchone()
+    
+    if cat and cat[0]:
+    
+        translated_category = cat[0]
+    
     await callback.message.answer(
-        f"📋 {category}",
+        f"📋 {translated_category}",
         reply_markup=products_kb
     )
 
     await callback.answer()
+
 # =========================
 # PRODUCT CARD
 # =========================
@@ -751,14 +992,20 @@ async def product_card(callback: types.CallbackQuery):
 
     kb.row(
         InlineKeyboardButton(
-            text="🛒 Add to cart",
+            text=get_text(
+            callback.from_user.id,
+            "add_to_cart"
+            ),
             callback_data=f"add_{original_name}_{count}"
         )
     )
 
     kb.row(
         InlineKeyboardButton(
-            text="⬅ Back",
+            text=get_text(
+            callback.from_user.id,
+            "back"
+            ),
             callback_data=f"category_{category}"
         )
     )
@@ -834,7 +1081,7 @@ async def plus_callback(callback: types.CallbackQuery):
 
     kb.row(
         InlineKeyboardButton(
-            text="⬅ Back",
+            text=get_text(callback.from_user.id, "back"),
             callback_data=f"category_{category}"
         )
     )
@@ -892,7 +1139,7 @@ async def minus_callback(callback: types.CallbackQuery):
 
     kb.row(
         InlineKeyboardButton(
-            text="⬅ Back",
+            text=get_text(callback.from_user.id, "back"),
             callback_data=f"category_{category}"
         )
     )
@@ -1001,37 +1248,82 @@ async def open_cart(callback: types.CallbackQuery):
 
         return
 
-    text = "🛒 YOUR CART\n\n"
+    text = f"{get_text(user_id, 'your_cart')}\n\n"
 
     total = 0
 
+    language = get_user_language(user_id)
+
     for item in items:
-
-        text += f"• {item[0]} — {item[1]} TL\n"
-
+    
+        product_name = item[0]
+    
+        if language == "ru":
+    
+            cur.execute(
+                """
+                SELECT product_name_ru
+                FROM products
+                WHERE product_name=%s
+                """,
+                (product_name,)
+            )
+    
+        elif language == "tr":
+    
+            cur.execute(
+                """
+                SELECT product_name_tr
+                FROM products
+                WHERE product_name=%s
+                """,
+                (product_name,)
+            )
+    
+        else:
+    
+            cur.execute(
+                """
+                SELECT product_name_en
+                FROM products
+                WHERE product_name=%s
+                """,
+                (product_name,)
+            )
+    
+        translated = cur.fetchone()
+    
+        translated_name = product_name
+    
+        if translated and translated[0]:
+    
+            translated_name = translated[0]
+    
+        text += f"• {translated_name} — {item[1]} TL\n"
+    
         total += item[1]
-
-    text += f"\n💰 Total: {total} TL"
-
+    
+    text += f"\n{get_text(user_id, 'total')}: {total} TL"
+    
     kb = InlineKeyboardMarkup(row_width=1)
 
     kb.add(
         InlineKeyboardButton(
-            text="✅ Checkout",
+            text=get_text(user_id, "checkout"),
             callback_data="checkout"
         )
     )
 
     kb.add(
         InlineKeyboardButton(
-            text="🗑 Clear cart",
+            text=get_text(user_id, "clear_cart"),
             callback_data="clear_cart"
         )
     )
 
     kb.add(
         InlineKeyboardButton(
-            text="⬅ Back",
+            text=get_text(callback.from_user.id, "back"),
             callback_data="back_main"
         )
     )
@@ -1110,11 +1402,16 @@ async def checkout_start(callback: types.CallbackQuery):
     )
 
     kb.add(
-        KeyboardButton("⏭ Skip")
+    KeyboardButton(
+        get_text(callback.from_user.id, "skip")
     )
+)
 
     await callback.message.answer(
-        "📍 Send location or skip",
+        get_text(
+        callback.from_user.id,
+        "send_location"
+        ),
         reply_markup=kb
     )
 
@@ -1146,7 +1443,10 @@ async def checkout_location(
     )
 
     await message.answer(
-        "📞 Enter phone number"
+        get_text(
+        message.from_user.id,
+        "send_phone"
+        )
     )
 
     await Checkout.phone.set()
@@ -1209,7 +1509,10 @@ async def checkout_phone(
     )
 
     await message.answer(
-        "🚪 Enter comment / door code"
+        get_text(
+        message.from_user.id,
+        "send_comment"
+        )    
     )
 
     await Checkout.comment.set()
@@ -1347,7 +1650,10 @@ async def checkout_comment(
         conn.commit()
 
         await message.answer(
-            "✅ Order sent successfully!",
+            get_text(
+            message.from_user.id,
+            "order_success"
+            ),
             reply_markup=inline_main_menu(message.from_user.id)
         )
 
@@ -1360,7 +1666,10 @@ async def checkout_comment(
         print(e)
 
         await message.answer(
-            "❌ Order error"
+            get_text(
+            message.from_user.id,
+            "order_error"
+            )
         )
         
 # =========================
@@ -1381,24 +1690,26 @@ async def order_status_callback(
     order_id = data[2]
 
     if status_type == "preparing":
-
-        new_status = "🧑‍🍳 Preparing"
-
+    
+        status_key = "status_preparing"
+    
     elif status_type == "delivery":
-
-        new_status = "🛵 Delivery"
-
+    
+        status_key = "status_delivery"
+    
     elif status_type == "completed":
-
-        new_status = "✅ Completed"
-
+    
+        status_key = "status_completed"
+    
     elif status_type == "cancelled":
-
-        new_status = "❌ Cancelled"
-
+    
+        status_key = "status_cancelled"
+    
     else:
-
+    
         return
+    
+    new_status = TEXTS[status_key]["en"]
 
     cur.execute(
         """
@@ -1431,9 +1742,16 @@ async def order_status_callback(
 
         try:
 
+            user_language = get_user_language(user_id)
+
+            translated_status = TEXTS[status_key].get(
+                user_language,
+                TEXTS[status_key]["en"]
+            )
+            
             await bot.send_message(
                 user_id,
-                f"📦 Order status updated:\n\n{new_status}"
+                f"{get_text(user_id, 'status_updated')}:\n\n{translated_status}"
             )
 
         except:
