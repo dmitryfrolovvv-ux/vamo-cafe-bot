@@ -567,7 +567,7 @@ def register_admin(dp, conn, cur, main_menu):
     # =====================
     
     @dp.message_handler(
-        lambda m: m.text == "📝 Change description",
+        lambda m: m.text == "📄 Change description",
         state=AdminStates.edit_product_action
     )
     async def change_description_start(
