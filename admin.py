@@ -1126,8 +1126,17 @@ def register_admin(dp, conn, cur, main_menu):
                 """
                 INSERT INTO products(
                     category,
+                
                     product_name,
+                    product_name_en,
+                    product_name_ru,
+                    product_name_tr,
+                
                     description,
+                    description_en,
+                    description_ru,
+                    description_tr,
+                
                     price,
                     image
                 )
@@ -1135,8 +1144,17 @@ def register_admin(dp, conn, cur, main_menu):
                 """,
                 (
                     data["category"],
-                    data["name"],
-                    data["description"],
+                
+                    data["product_name_en"],
+                    data["product_name_en"],
+                    data["product_name_ru"],
+                    data["product_name_tr"],
+                
+                    data["description_en"],
+                    data["description_en"],
+                    data["description_ru"],
+                    data["description_tr"],
+                
                     data["price"],
                     photo_id
                 )
