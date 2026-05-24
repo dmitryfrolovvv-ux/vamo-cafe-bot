@@ -506,93 +506,67 @@ async def category_callback(callback: types.CallbackQuery):
         "category_",
         ""
     )
-    cur.execute(
-    """
-    SELECT image, description
-    FROM categories
-    WHERE name=%s
-    """,
-    (category,)
-)
 
-    category_data = cur.fetchone()
-
-    if category_data:
-
-        category_image = category_data[0]
-
-        category_description = category_data[1]
-
-        if category_image:
-
-            await bot.send_photo(
-                callback.message.chat.id,
-                photo=category_image,
-                caption=(
-                    f"📂 {category}\n\n"
-                    f"{category_description or ''}"
-                )
-            )
     language = get_user_language(
-    callback.from_user.id
-)
-
-if language == "ru":
-
-    cur.execute(
-        """
-        SELECT
-            product_name,
-            product_name_ru
-        FROM products
-        WHERE category=%s
-        """,
-        (category,)
+        callback.from_user.id
     )
 
-elif language == "tr":
+    if language == "ru":
 
-    cur.execute(
-        """
-        SELECT
-            product_name,
-            product_name_tr
-        FROM products
-        WHERE category=%s
-        """,
-        (category,)
-    )
+        cur.execute(
+            """
+            SELECT
+                product_name,
+                product_name_ru
+            FROM products
+            WHERE category=%s
+            """,
+            (category,)
+        )
 
-else:
+    elif language == "tr":
 
-    cur.execute(
-        """
-        SELECT
-            product_name,
-            product_name_en
-        FROM products
-        WHERE category=%s
-        """,
-        (category,)
-    )
+        cur.execute(
+            """
+            SELECT
+                product_name,
+                product_name_tr
+            FROM products
+            WHERE category=%s
+            """,
+            (category,)
+        )
+
+    else:
+
+        cur.execute(
+            """
+            SELECT
+                product_name,
+                product_name_en
+            FROM products
+            WHERE category=%s
+            """,
+            (category,)
+        )
 
     products = cur.fetchall()
 
-if not products:
+    if not products:
 
-    await callback.answer(
-        "❌ No products",
-        show_alert=True
-    )
+        await callback.answer(
+            "❌ No products",
+            show_alert=True
+        )
 
-    return
+        return
 
     products_kb = InlineKeyboardMarkup(row_width=1)
 
     for product in products:
 
         original_name = product[0]
-    
+
         translated_name = product[1] or product[0]
 
         products_kb.add(
@@ -615,7 +589,6 @@ if not products:
     )
 
     await callback.answer()
-
 # =========================
 # PRODUCT CARD
 # =========================
