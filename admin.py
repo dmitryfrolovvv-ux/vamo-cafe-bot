@@ -1103,7 +1103,7 @@ def register_admin(dp, conn, cur, main_menu):
             "🖼 Send product photo"
         )
 
-        await AdminStates.add_product_description.set()
+        await AdminStates.add_product_photo.set()
 
 
     # =====================
@@ -1140,7 +1140,7 @@ def register_admin(dp, conn, cur, main_menu):
                     price,
                     image
                 )
-                VALUES(%s,%s,%s,%s,%s)
+                VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """,
                 (
                     data["category"],
