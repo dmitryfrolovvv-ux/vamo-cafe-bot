@@ -460,107 +460,107 @@ def register_admin(dp, conn, cur, main_menu):
             )
             
     # =====================
-# CHANGE NAME MULTILANGUAGE
-# =====================
+    # CHANGE NAME MULTILANGUAGE
+    # =====================
 
-@dp.message_handler(
-    lambda m: m.text == "📝 Change name",
-    state=AdminStates.edit_product_action
-)
-async def change_name_start(
-    message: types.Message
-):
-
-    await message.answer(
-        "🇬🇧 Enter new product name (EN)"
+    @dp.message_handler(
+        lambda m: m.text == "📝 Change name",
+        state=AdminStates.edit_product_action
     )
-
-    await AdminStates.editing_product_name_en.set()
-
-
-@dp.message_handler(
-    state=AdminStates.editing_product_name_en
-)
-async def change_name_en(
-    message: types.Message,
-    state: FSMContext
-):
-
-    await state.update_data(
-        new_name_en=message.text
-    )
-
-    await message.answer(
-        "🇷🇺 Enter new product name (RU)"
-    )
-
-    await AdminStates.editing_product_name_ru.set()
-
-
-@dp.message_handler(
-    state=AdminStates.editing_product_name_ru
-)
-async def change_name_ru(
-    message: types.Message,
-    state: FSMContext
-):
-
-    await state.update_data(
-        new_name_ru=message.text
-    )
-
-    await message.answer(
-        "🇹🇷 Enter new product name (TR)"
-    )
-
-    await AdminStates.editing_product_name_tr.set()
-
-
-@dp.message_handler(
-    state=AdminStates.editing_product_name_tr
-)
-async def change_name_tr(
-    message: types.Message,
-    state: FSMContext
-):
-
-    data = await state.get_data()
-
-    old_name = data["product_name"]
-
-    new_name_en = data["new_name_en"]
-
-    new_name_ru = data["new_name_ru"]
-
-    new_name_tr = message.text
-
-    cur.execute(
-        """
-        UPDATE products
-        SET
-            product_name=%s,
-            product_name_en=%s,
-            product_name_ru=%s,
-            product_name_tr=%s
-        WHERE product_name=%s
-        """,
-        (
-            new_name_en,
-            new_name_en,
-            new_name_ru,
-            new_name_tr,
-            old_name
+    async def change_name_start(
+        message: types.Message
+    ):
+    
+        await message.answer(
+            "🇬🇧 Enter new product name (EN)"
         )
+    
+        await AdminStates.editing_product_name_en.set()
+    
+    
+    @dp.message_handler(
+        state=AdminStates.editing_product_name_en
     )
-
-    conn.commit()
-
-    await message.answer(
-        "✅ Product names updated",
-        reply_markup=admin_menu()
+    async def change_name_en(
+        message: types.Message,
+        state: FSMContext
+    ):
+    
+        await state.update_data(
+            new_name_en=message.text
+        )
+    
+        await message.answer(
+            "🇷🇺 Enter new product name (RU)"
+        )
+    
+        await AdminStates.editing_product_name_ru.set()
+    
+    
+    @dp.message_handler(
+        state=AdminStates.editing_product_name_ru
     )
-
-    await state.finish()
+    async def change_name_ru(
+        message: types.Message,
+        state: FSMContext
+    ):
+    
+        await state.update_data(
+            new_name_ru=message.text
+        )
+    
+        await message.answer(
+            "🇹🇷 Enter new product name (TR)"
+        )
+    
+        await AdminStates.editing_product_name_tr.set()
+    
+    
+    @dp.message_handler(
+        state=AdminStates.editing_product_name_tr
+    )
+    async def change_name_tr(
+        message: types.Message,
+        state: FSMContext
+    ):
+    
+        data = await state.get_data()
+    
+        old_name = data["product_name"]
+    
+        new_name_en = data["new_name_en"]
+    
+        new_name_ru = data["new_name_ru"]
+    
+        new_name_tr = message.text
+    
+        cur.execute(
+            """
+            UPDATE products
+            SET
+                product_name=%s,
+                product_name_en=%s,
+                product_name_ru=%s,
+                product_name_tr=%s
+            WHERE product_name=%s
+            """,
+            (
+                new_name_en,
+                new_name_en,
+                new_name_ru,
+                new_name_tr,
+                old_name
+            )
+        )
+    
+        conn.commit()
+    
+        await message.answer(
+            "✅ Product names updated",
+            reply_markup=admin_menu()
+        )
+    
+        await state.finish()
         
     # =====================
     # CHANGE DESCRIPTION
