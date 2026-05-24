@@ -306,6 +306,13 @@ def inline_main_menu(user_id=None):
             callback_data="change_language"
         )
     )
+    
+    kb.row(
+    InlineKeyboardButton(
+        text=get_text(user_id, "contacts"),
+        callback_data="contacts"
+    )
+)
 
     return kb
 # =========================
@@ -599,8 +606,52 @@ TEXTS = {
         "ru": "❌ Отменен",
     
         "tr": "❌ İptal edildi"
-    }
+    },
 
+    "contacts": {
+
+    "en": "ℹ️ Contacts",
+
+    "ru": "ℹ️ Контакты",
+
+    "tr": "ℹ️ İletişim"
+    },
+    
+    "contacts_text": {
+    
+        "en": (
+            "📍 VAMO Cafe\n\n"
+            "📞 +90 552 318 95 52\n\n"
+            "🕒 11:00 - 00:00\n\n"
+            "📍 Mahmutlar, Barbaros Cd., 07450 Alanya/Antalya\n\n"
+            "🚚 Free delivery"
+        ),
+    
+        "ru": (
+            "📍 VAMO Cafe\n\n"
+            "📞 +90 552 318 95 52\n\n"
+            "🕒 11:00 - 00:00\n\n"
+            "📍 Махмутлар, Barbaros Cd., 07450 Аланья/Анталья\n\n"
+            "🚚 Бесплатная доставка"
+        ),
+    
+        "tr": (
+            "📍 VAMO Cafe\n\n"
+            "📞 +90 552 318 95 52\n\n"
+            "🕒 11:00 - 00:00\n\n"
+            "📍 Mahmutlar, Barbaros Cd., 07450 Alanya/Antalya\n\n"
+            "🚚 ücretsiz teslimat"
+        )
+    },
+    
+    "open_location": {
+    
+        "en": "📍 Open location",
+    
+        "ru": "📍 Открыть локацию",
+    
+        "tr": "📍 Konumu aç"
+    }
 }
 
 # =========================
@@ -877,6 +928,45 @@ async def category_callback(callback: types.CallbackQuery):
 
     await callback.answer()
 
+@dp.callback_query_handler(
+    lambda c: c.data == "contacts"
+)
+async def contacts_callback(
+    callback: types.CallbackQuery
+):
+
+    kb = InlineKeyboardMarkup(row_width=1)
+
+    kb.add(
+        InlineKeyboardButton(
+            text=get_text(
+                callback.from_user.id,
+                "open_location"
+            ),
+            url="https://maps.google.com"
+        )
+    )
+
+    kb.add(
+        InlineKeyboardButton(
+            text=get_text(
+                callback.from_user.id,
+                "back"
+            ),
+            callback_data="back_main"
+        )
+    )
+
+    await callback.message.answer(
+        get_text(
+            callback.from_user.id,
+            "contacts_text"
+        ),
+        reply_markup=kb
+    )
+
+    await callback.answer()
+    
 # =========================
 # PRODUCT CARD
 # =========================
