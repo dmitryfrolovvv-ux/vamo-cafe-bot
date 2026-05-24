@@ -376,7 +376,52 @@ TEXTS = {
 
         "tr": "🏠 Ana Menü"
     }
-}
+
+    "cart_empty": {
+    
+        "en": "🛒 Cart is empty",
+    
+        "ru": "🛒 Корзина пуста",
+    
+        "tr": "🛒 Sepet boş"
+    },
+    
+    "product_not_found": {
+    
+        "en": "❌ Product not found",
+    
+        "ru": "❌ Товар не найден",
+    
+        "tr": "❌ Ürün bulunamadı"
+    },
+    
+    "no_products": {
+    
+        "en": "❌ No products",
+    
+        "ru": "❌ Нет товаров",
+    
+        "tr": "❌ Ürün yok"
+    },
+    
+    "cart_cleared": {
+    
+        "en": "🗑 Cart cleared",
+    
+        "ru": "🗑 Корзина очищена",
+    
+        "tr": "🗑 Sepet temizlendi"
+    },
+
+    "added_to_cart": {
+    
+        "en": "✅ Added to cart",
+    
+        "ru": "✅ Добавлено в корзину",
+    
+        "tr": "✅ Sepete eklendi"
+    
+    }
 
 # =========================
 # LANGUAGE MENU
@@ -555,7 +600,7 @@ async def category_callback(callback: types.CallbackQuery):
     if not products:
 
         await callback.answer(
-            "❌ No products",
+            get_text(callback.from_user.id, "no_products"),
             show_alert=True
         )
 
@@ -663,7 +708,7 @@ async def product_card(callback: types.CallbackQuery):
     if not product:
 
         await callback.answer(
-            "❌ Product not found",
+            get_text(callback.from_user.id, "product_not_found"),
             show_alert=True
         )
 
@@ -920,7 +965,7 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
     conn.commit()
 
     await callback.answer(
-        f"✅ Added {count}x to cart"
+        get_text(callback.from_user.id, "added_to_cart")
     )
 
 # =========================
@@ -948,7 +993,7 @@ async def open_cart(callback: types.CallbackQuery):
     if not items:
 
         await callback.answer(
-            "🛒 Cart is empty",
+            get_text(callback.from_user.id, "cart_empty"),
             show_alert=True
         )
 
@@ -1018,7 +1063,7 @@ async def clear_cart(callback: types.CallbackQuery):
     conn.commit()
 
     await callback.answer(
-        "🗑 Cart cleared"
+        get_text(callback.from_user.id, "cart_cleared")
     )
 
     await callback.message.answer(
