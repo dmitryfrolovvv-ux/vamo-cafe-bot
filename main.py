@@ -578,7 +578,7 @@ else:
 
     products = cur.fetchall()
 
-    if not products:
+if not products:
 
     await callback.answer(
         "❌ No products",
