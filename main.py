@@ -943,7 +943,7 @@ async def contacts_callback(
                 callback.from_user.id,
                 "open_location"
             ),
-            url="https://maps.app.goo.gl/BpzruptMdrSSawgs9"
+            url="https://maps.app.goo.gl/hS4NTS3RvsgVMKLb9?g_st=ic"
         )
     )
 
