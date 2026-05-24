@@ -422,6 +422,7 @@ TEXTS = {
         "tr": "✅ Sepete eklendi"
     
     }
+}
 
 # =========================
 # LANGUAGE MENU
