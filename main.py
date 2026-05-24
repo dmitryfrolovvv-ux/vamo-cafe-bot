@@ -581,11 +581,11 @@ else:
     if not products:
 
     await callback.answer(
-            "❌ No products",
-            show_alert=True
-        )
+        "❌ No products",
+        show_alert=True
+    )
 
-        return
+    return
 
     products_kb = InlineKeyboardMarkup(row_width=1)
 
