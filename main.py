@@ -533,9 +533,43 @@ async def category_callback(callback: types.CallbackQuery):
                     f"{category_description or ''}"
                 )
             )
+    language = get_user_language(
+    callback.from_user.id
+)
+
+if language == "ru":
+
     cur.execute(
         """
-        SELECT product_name
+        SELECT
+            product_name,
+            product_name_ru
+        FROM products
+        WHERE category=%s
+        """,
+        (category,)
+    )
+
+elif language == "tr":
+
+    cur.execute(
+        """
+        SELECT
+            product_name,
+            product_name_tr
+        FROM products
+        WHERE category=%s
+        """,
+        (category,)
+    )
+
+else:
+
+    cur.execute(
+        """
+        SELECT
+            product_name,
+            product_name_en
         FROM products
         WHERE category=%s
         """,
@@ -557,12 +591,14 @@ async def category_callback(callback: types.CallbackQuery):
 
     for product in products:
 
-        product_name = product[0]
+        original_name = product[0]
+    
+        translated_name = product[1] or product[0]
 
         products_kb.add(
             InlineKeyboardButton(
-                text=product_name,
-                callback_data=f"product_{product_name}"
+                text=translated_name,
+                callback_data=f"product_{original_name}"
             )
         )
 
