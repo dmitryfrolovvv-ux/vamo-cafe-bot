@@ -375,7 +375,7 @@ TEXTS = {
         "ru": "🏠 Главное меню",
 
         "tr": "🏠 Ana Menü"
-    }
+    },
 
     "cart_empty": {
     
@@ -421,7 +421,9 @@ TEXTS = {
     
         "tr": "✅ Sepete eklendi"
     
-    },
+    }
+
+}
 
 # =========================
 # LANGUAGE MENU
