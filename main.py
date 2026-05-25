@@ -2377,11 +2377,11 @@ async def promo_apply(
     )
     
     await message.answer(
-        text,
-        reply_markup=kb
-    )
-    
-    @dp.callback_query_handler(
+    text,
+    reply_markup=kb
+)
+
+@dp.callback_query_handler(
     lambda c: c.data.startswith("deletepromo_")
 )
 async def delete_promo_callback(
