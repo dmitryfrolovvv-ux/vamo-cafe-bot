@@ -2305,7 +2305,7 @@ async def promo_apply(
             "❌ Promo already used"
         )
 
-        await state.reset_state(with_data=False)
+        await state.finish()
 
         return
 
@@ -2316,12 +2316,14 @@ async def promo_apply(
         promo_discount=discount
     )
     user_promos[user_id] = {
-    "promo_code": code,
-    "promo_discount": discount
-    } 
-
+        "promo_code": code,
+        "promo_discount": discount
+    }
+    
+    await state.finish()
+    
     await message.answer(
-    f"✅ Promo applied: {discount}%"
+        f"✅ Promo applied: {discount}%"
     )
     
     cur.execute(
