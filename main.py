@@ -2380,6 +2380,7 @@ async def promo_apply(
         text,
         reply_markup=kb
     )
+    
     @dp.callback_query_handler(
     lambda c: c.data.startswith("deletepromo_")
 )
