@@ -2388,6 +2388,88 @@ async def promo_apply(
         text,
         reply_markup=kb
     )
+    @dp.callback_query_handler(
+    lambda c: c.data.startswith("deletepromo_")
+)
+async def delete_promo_callback(
+    callback: types.CallbackQuery
+):
+
+    if not is_admin(callback.from_user.id):
+        return
+
+    code = callback.data.replace(
+        "deletepromo_",
+        ""
+    )
+
+    cur.execute(
+        """
+        DELETE FROM promocodes
+        WHERE code=%s
+        """,
+        (code,)
+    )
+
+    conn.commit()
+
+    await callback.message.edit_text(
+        f"✅ Promo deleted: {code}"
+    )
+
+    await callback.answer()
+    
+# =========================
+# DELETE PROMO
+# =========================
+
+@dp.message_handler(
+    lambda m: m.text == "🗑 Delete promo"
+)
+async def delete_promo_menu(
+    message: types.Message
+):
+
+    if not is_admin(message.from_user.id):
+        return
+
+    cur.execute(
+        """
+        SELECT code, discount
+        FROM promocodes
+        ORDER BY id DESC
+        """
+    )
+
+    promos = cur.fetchall()
+
+    if not promos:
+
+        await message.answer(
+            "❌ No promo codes"
+        )
+
+        return
+
+    kb = InlineKeyboardMarkup(row_width=1)
+
+    for promo in promos:
+
+        code = promo[0]
+
+        discount = promo[1]
+
+        kb.add(
+            InlineKeyboardButton(
+                text=f"{code} — {discount}%",
+                callback_data=f"deletepromo_{code}"
+            )
+        )
+
+    await message.answer(
+        "🗑 Select promo to delete",
+        reply_markup=kb
+    )
     
 # =========================
 # RUN
