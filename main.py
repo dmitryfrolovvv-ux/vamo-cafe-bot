@@ -1479,7 +1479,30 @@ async def open_cart(callback: types.CallbackQuery):
     
         total += item[1]
     
-    text += f"\n{get_text(user_id, 'total')}: {total} TL"
+        original_total = total
+    
+    promo_data = user_promos.get(
+        user_id,
+        {}
+    )
+    
+    if "promo_discount" in promo_data:
+    
+        promo_discount = promo_data["promo_discount"]
+    
+        promo_code = promo_data["promo_code"]
+    
+        discount_amount = total * promo_discount / 100
+    
+        total = int(total - discount_amount)
+    
+        text += (
+            f"\n\n🎁 Promo: {promo_code}"
+            f"\n💸 Discount: {promo_discount}%"
+            f"\n💰 Old total: {original_total} TL"
+        )
+    
+    text += f"\n✅ New total: {total} TL"
     
     kb = InlineKeyboardMarkup(row_width=1)
 
