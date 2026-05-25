@@ -1009,40 +1009,32 @@ async def category_callback(callback: types.CallbackQuery):
     await callback.answer()
 
 @dp.callback_query_handler(
-    lambda c: c.data == "contacts"
+    lambda c: c.data.startswith("deletepromo_")
 )
-async def contacts_callback(
+async def delete_promo_callback(
     callback: types.CallbackQuery
 ):
 
-    kb = InlineKeyboardMarkup(row_width=1)
+    if not is_admin(callback.from_user.id):
+        return
 
-    kb.add(
-        InlineKeyboardButton(
-            text=get_text(
-                callback.from_user.id,
-                "open_location"
-            ),
-            url="https://maps.app.goo.gl/hS4NTS3RvsgVMKLb9?g_st=ic"
-        )
+    code = callback.data.replace(
+        "deletepromo_",
+        ""
     )
 
-    kb.add(
-        InlineKeyboardButton(
-            text=get_text(
-                callback.from_user.id,
-                "back"
-            ),
-            callback_data="back_main"
-        )
+    cur.execute(
+        """
+        DELETE FROM promocodes
+        WHERE code=%s
+        """,
+        (code,)
     )
 
-    await callback.message.answer(
-        get_text(
-            callback.from_user.id,
-            "contacts_text"
-        ),
-        reply_markup=kb
+    conn.commit()
+
+    await callback.message.edit_text(
+        f"✅ Promo deleted: {code}"
     )
 
     await callback.answer()
