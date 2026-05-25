@@ -36,6 +36,7 @@ logging.basicConfig(level=logging.INFO)
 # =========================
 
 bot = Bot(token=TOKEN)
+user_promos = {}
 
 storage = MemoryStorage()
 
@@ -1758,7 +1759,10 @@ async def checkout_comment(
 
         promo_code = None
         
-        promo_data = await state.get_data()
+        promo_data = user_promos.get(
+            user_id,
+            {}
+        )
         
         if "promo_discount" in promo_data:
         
@@ -1875,6 +1879,10 @@ async def checkout_comment(
 
             conn.commit()
             
+            if user_id in user_promos:
+        
+                del user_promos[user_id]
+        
         await message.answer(
             get_text(
             message.from_user.id,
@@ -2287,10 +2295,20 @@ async def promo_apply(
         promo_code=code,
         promo_discount=discount
     )
+    user_promos[user_id] = {
+    "promo_code": code,
+    "promo_discount": discount
+    } 
 
     await message.answer(
         f"✅ Promo applied: {discount}%"
     )
+    
+    await message.answer(
+    "🛒 Reopen cart to see updated total"
+    )
+    
+    await state.finish()
     
 # =========================
 # RUN
