@@ -118,6 +118,10 @@ def admin_menu():
     kb.add(
         KeyboardButton("🎁 Create promo")
     )
+    
+    kb.add(
+        KeyboardButton("🗑 Delete promo")
+    )
 
     kb.add(
         KeyboardButton("♻ Reset"),
