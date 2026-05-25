@@ -92,6 +92,13 @@ CREATE TABLE IF NOT EXISTS orders(
 )
 """)
 
+cur.execute("""
+CREATE TABLE IF NOT EXISTS admins(
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT UNIQUE
+)
+""")
+
 conn.commit()
 
 try:
@@ -686,6 +693,7 @@ def get_text(user_id, key):
         language,
         TEXTS[key]["en"]
     )
+    
 def language_menu():
 
     kb = InlineKeyboardMarkup(row_width=1)
