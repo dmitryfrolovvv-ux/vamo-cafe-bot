@@ -5,6 +5,8 @@
 import logging
 import psycopg2
 
+
+from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, executor, types
 from admin import register_admin
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -66,6 +68,18 @@ class AddAdmin(StatesGroup):
 
     user_id = State()
 
+class PromoCreate(StatesGroup):
+
+    code = State()
+
+    discount = State()
+
+    hours = State()
+    
+class PromoUse(StatesGroup):
+
+    code = State()
+    
 # =========================
 # TABLES
 # =========================
@@ -114,6 +128,27 @@ cur.execute(
     """,
     (ADMIN_ID,)
 )
+
+conn.commit()
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS promocodes(
+    id SERIAL PRIMARY KEY,
+    code TEXT UNIQUE,
+    discount INTEGER,
+    expires_at TIMESTAMP
+)
+""")
+
+conn.commit()
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS promo_usages(
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT,
+    promo_code TEXT
+)
+""")
 
 conn.commit()
 
@@ -358,6 +393,10 @@ def simple_menu():
     
     kb.add(
         KeyboardButton("📋 Admin list")
+    )
+    
+    kb.add(
+    KeyboardButton("🎁 Create promo")
     )
 
     return kb
@@ -1463,6 +1502,13 @@ async def open_cart(callback: types.CallbackQuery):
     )
 
     kb.add(
+    InlineKeyboardButton(
+        text="🎁 Promo code",
+        callback_data="promo_code"
+        )
+    )
+    
+    kb.add(
         InlineKeyboardButton(
             text=get_text(user_id, "clear_cart"),
             callback_data="clear_cart"
@@ -1720,6 +1766,18 @@ async def checkout_comment(
 
         order_text = f"🚨 NEW ORDER {mention}\n\n"
 
+        promo_discount = 0
+
+        promo_code = None
+        
+        promo_data = await state.get_data()
+        
+        if "promo_discount" in promo_data:
+        
+            promo_discount = promo_data["promo_discount"]
+        
+            promo_code = promo_data["promo_code"]
+            
         total = 0
 
         for item in items:
@@ -1728,6 +1786,20 @@ async def checkout_comment(
 
             total += item[1]
 
+        original_total = total
+
+        if promo_discount > 0:
+        
+            discount_amount = total * promo_discount / 100
+        
+            total = int(total - discount_amount)
+        
+            order_text += (
+                f"\n🎁 Promo: {promo_code}"
+                f"\n💸 Discount: {promo_discount}%"
+                f"\n💰 Old total: {original_total} TL"
+            )
+        
         order_text += f"\n💰 Total: {total} TL"
 
         order_text += f"\n\n📍 Address:\n{address}"
@@ -1797,6 +1869,24 @@ async def checkout_comment(
 
         conn.commit()
 
+        if promo_code:
+
+            cur.execute(
+                """
+                INSERT INTO promo_usages(
+                    user_id,
+                    promo_code
+                )
+                VALUES(%s,%s)
+                """,
+                (
+                    user_id,
+                    promo_code
+                )
+            )
+
+            conn.commit()
+            
         await message.answer(
             get_text(
             message.from_user.id,
@@ -1991,6 +2081,230 @@ async def admin_list(message: types.Message):
         text += f"• {admin[0]}\n"
 
     await message.answer(text)
+    
+# =========================
+# CREATE PROMO
+# =========================
+
+@dp.message_handler(
+    lambda m: m.text == "🎁 Create promo"
+)
+async def create_promo_start(
+    message: types.Message
+):
+
+    if not is_admin(message.from_user.id):
+        return
+
+    await message.answer(
+        "Enter promo code"
+    )
+
+    await PromoCreate.code.set()
+
+
+@dp.message_handler(state=PromoCreate.code)
+async def promo_code_step(
+    message: types.Message,
+    state: FSMContext
+):
+
+    await state.update_data(
+        code=message.text.upper()
+    )
+
+    await message.answer(
+        "Enter discount %"
+    )
+
+    await PromoCreate.discount.set()
+
+
+@dp.message_handler(state=PromoCreate.discount)
+async def promo_discount_step(
+    message: types.Message,
+    state: FSMContext
+):
+
+    try:
+
+        discount = int(message.text)
+
+    except:
+
+        await message.answer(
+            "Enter number"
+        )
+
+        return
+
+    await state.update_data(
+        discount=discount
+    )
+
+    await message.answer(
+        "Enter hours"
+    )
+
+    await PromoCreate.hours.set()
+
+
+@dp.message_handler(state=PromoCreate.hours)
+async def promo_hours_step(
+    message: types.Message,
+    state: FSMContext
+):
+
+    try:
+
+        hours = int(message.text)
+
+    except:
+
+        await message.answer(
+            "Enter number"
+        )
+
+        return
+
+    data = await state.get_data()
+
+    code = data["code"]
+
+    discount = data["discount"]
+
+    expires_at = datetime.now() + timedelta(hours=hours)
+
+    try:
+
+        cur.execute(
+            """
+            INSERT INTO promocodes(
+                code,
+                discount,
+                expires_at
+            )
+            VALUES(%s,%s,%s)
+            """,
+            (
+                code,
+                discount,
+                expires_at
+            )
+        )
+
+        conn.commit()
+
+        await message.answer(
+            (
+                f"✅ Promo created\n\n"
+                f"🎁 Code: {code}\n"
+                f"💸 Discount: {discount}%\n"
+                f"⏰ Hours: {hours}"
+            )
+        )
+
+    except Exception as e:
+
+        print(e)
+
+        conn.rollback()
+
+        await message.answer(
+            "❌ Error"
+        )
+
+    await state.finish()
+    
+# =========================
+# PROMO APPLY
+# =========================
+
+@dp.callback_query_handler(
+    lambda c: c.data == "promo_code"
+)
+async def promo_start(
+    callback: types.CallbackQuery
+):
+
+    await callback.message.answer(
+        "🎁 Enter promo code"
+    )
+
+    await PromoUse.code.set()
+
+    await callback.answer()
+
+
+@dp.message_handler(state=PromoUse.code)
+async def promo_apply(
+    message: types.Message,
+    state: FSMContext
+):
+
+    code = message.text.upper()
+
+    user_id = message.from_user.id
+
+    # CHECK PROMO EXISTS
+    cur.execute(
+        """
+        SELECT discount
+        FROM promocodes
+        WHERE code=%s
+        AND expires_at > NOW()
+        """,
+        (code,)
+    )
+
+    promo = cur.fetchone()
+
+    if not promo:
+
+        await message.answer(
+            "❌ Invalid or expired promo"
+        )
+
+        return
+
+    # CHECK ALREADY USED
+    cur.execute(
+        """
+        SELECT *
+        FROM promo_usages
+        WHERE user_id=%s
+        AND promo_code=%s
+        """,
+        (
+            user_id,
+            code
+        )
+    )
+
+    used = cur.fetchone()
+
+    if used:
+
+        await message.answer(
+            "❌ Promo already used"
+        )
+
+        await state.finish()
+
+        return
+
+    discount = promo[0]
+
+    await state.update_data(
+        promo_code=code,
+        promo_discount=discount
+    )
+
+    await message.answer(
+        f"✅ Promo applied: {discount}%"
+    )
+
+    await state.finish()
     
 # =========================
 # RUN
