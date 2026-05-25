@@ -62,6 +62,10 @@ class Checkout(StatesGroup):
 
     comment = State()
 
+class AddAdmin(StatesGroup):
+
+    user_id = State()
+
 # =========================
 # TABLES
 # =========================
@@ -98,6 +102,18 @@ CREATE TABLE IF NOT EXISTS admins(
     user_id BIGINT UNIQUE
 )
 """)
+
+conn.commit()
+
+cur.execute(
+    """
+    INSERT INTO admins(user_id)
+    VALUES(%s)
+    ON CONFLICT(user_id)
+    DO NOTHING
+    """,
+    (ADMIN_ID,)
+)
 
 conn.commit()
 
@@ -335,6 +351,14 @@ def simple_menu():
     kb.add(
         KeyboardButton("/start")
     )
+    
+    kb.add(
+        KeyboardButton("➕ Add admin")
+    )
+    
+    kb.add(
+        KeyboardButton("📋 Admin list")
+    )
 
     return kb
 
@@ -356,7 +380,7 @@ register_admin(
 @dp.message_handler(lambda m: "reset" in m.text.lower(), state="*")
 async def reset_btn(message: types.Message, state: FSMContext):
 
-    if message.from_user.id != ADMIN_ID:
+    if not is_admin(message.from_user.id):
         return
 
     await state.finish()
@@ -693,7 +717,24 @@ def get_text(user_id, key):
         language,
         TEXTS[key]["en"]
     )
-    
+
+
+def is_admin(user_id):
+
+    cur.execute(
+        """
+        SELECT user_id
+        FROM admins
+        WHERE user_id=%s
+        """,
+        (user_id,)
+    )
+
+    admin = cur.fetchone()
+
+    return bool(admin)
+
+
 def language_menu():
 
     kb = InlineKeyboardMarkup(row_width=1)
@@ -729,9 +770,12 @@ def language_menu():
 async def start(message: types.Message):
 
     await message.answer(
-    "🌍 Choose language",
-    reply_markup=language_menu()
-)
+        get_text(
+            message.from_user.id,
+            "select_language"
+        ),
+        reply_markup=language_menu()
+    )
     
 # =========================
 # LANGUAGE SELECT
@@ -1172,7 +1216,10 @@ async def plus_callback(callback: types.CallbackQuery):
 
     kb.row(
         InlineKeyboardButton(
-            text="🛒 Add to cart",
+            text=get_text(
+            callback.from_user.id,
+            "add_to_cart"
+        ),
             callback_data=f"add_{name}_{count}"
         )
     )
@@ -1230,7 +1277,10 @@ async def minus_callback(callback: types.CallbackQuery):
 
     kb.row(
         InlineKeyboardButton(
-            text="🛒 Add to cart",
+            text=get_text(
+            callback.from_user.id,
+            "add_to_cart"
+        ),
             callback_data=f"add_{name}_{count}"
         )
     )
@@ -1858,6 +1908,89 @@ async def order_status_callback(
     await callback.answer(
         f"✅ {new_status}"
     )
+    
+# =========================
+# ADD ADMIN
+# =========================
+
+@dp.message_handler(lambda m: m.text == "➕ Add admin")
+async def add_admin_start(message: types.Message):
+
+    if not is_admin(message.from_user.id):
+        return
+
+    await message.answer(
+        "Send Telegram ID"
+    )
+
+    await AddAdmin.user_id.set()
+
+
+@dp.message_handler(state=AddAdmin.user_id)
+async def save_admin(
+    message: types.Message,
+    state: FSMContext
+):
+
+    try:
+
+        new_admin = int(message.text)
+
+        cur.execute(
+            """
+            INSERT INTO admins(user_id)
+            VALUES(%s)
+            ON CONFLICT(user_id)
+            DO NOTHING
+            """,
+            (new_admin,)
+        )
+
+        conn.commit()
+
+        await message.answer(
+            "✅ Admin added"
+        )
+
+    except Exception as e:
+
+        print(e)
+
+        conn.rollback()
+
+        await message.answer(
+            "❌ Error"
+        )
+
+    await state.finish()
+
+
+# =========================
+# ADMIN LIST
+# =========================
+
+@dp.message_handler(lambda m: m.text == "📋 Admin list")
+async def admin_list(message: types.Message):
+
+    if not is_admin(message.from_user.id):
+        return
+
+    cur.execute(
+        """
+        SELECT user_id
+        FROM admins
+        """
+    )
+
+    admins = cur.fetchall()
+
+    text = "📋 ADMINS\n\n"
+
+    for admin in admins:
+
+        text += f"• {admin[0]}\n"
+
+    await message.answer(text)
     
 # =========================
 # RUN
