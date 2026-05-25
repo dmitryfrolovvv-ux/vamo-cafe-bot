@@ -1586,7 +1586,10 @@ async def back_main(callback: types.CallbackQuery):
 @dp.callback_query_handler(
     lambda c: c.data == "checkout"
 )
-async def checkout_start(callback: types.CallbackQuery):
+async def checkout_start(
+    callback: types.CallbackQuery,
+    state: FSMContext
+):
 
     kb = ReplyKeyboardMarkup(
         resize_keyboard=True
@@ -1612,6 +1615,8 @@ async def checkout_start(callback: types.CallbackQuery):
         ),
         reply_markup=kb
     )
+
+    await state.finish()
 
     await Checkout.address.set()
 
@@ -2300,7 +2305,7 @@ async def promo_apply(
             "❌ Promo already used"
         )
 
-        await state.finish()
+        await state.reset_state(with_data=False)
 
         return
 
