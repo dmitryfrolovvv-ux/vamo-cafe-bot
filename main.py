@@ -2324,14 +2324,70 @@ async def promo_apply(
     } 
 
     await message.answer(
-        f"✅ Promo applied: {discount}%"
+    f"✅ Promo applied: {discount}%"
+    )
+    
+    cur.execute(
+        """
+        SELECT product_name, price
+        FROM cart
+        WHERE user_id=%s
+        """,
+        (user_id,)
+    )
+    
+    items = cur.fetchall()
+    
+    text = f"{get_text(user_id, 'your_cart')}\n\n"
+    
+    total = 0
+    
+    for item in items:
+    
+        text += f"• {item[0]} — {item[1]} TL\n"
+    
+        total += item[1]
+    
+    original_total = total
+    
+    discount_amount = total * discount / 100
+    
+    new_total = int(total - discount_amount)
+    
+    text += (
+        f"\n\n🎁 Promo: {code}"
+        f"\n💸 Discount: {discount}%"
+        f"\n💰 Old total: {original_total} TL"
+        f"\n✅ New total: {new_total} TL"
+    )
+    
+    kb = InlineKeyboardMarkup(row_width=1)
+    
+    kb.add(
+        InlineKeyboardButton(
+            text=get_text(user_id, "checkout"),
+            callback_data="checkout"
+        )
+    )
+    
+    kb.add(
+        InlineKeyboardButton(
+            text=get_text(user_id, "clear_cart"),
+            callback_data="clear_cart"
+        )
+    )
+    
+    kb.add(
+        InlineKeyboardButton(
+            text=get_text(user_id, "back"),
+            callback_data="back_main"
+        )
     )
     
     await message.answer(
-    "🛒 Reopen cart to see updated total"
+        text,
+        reply_markup=kb
     )
-    
-    await state.finish()
     
 # =========================
 # RUN
