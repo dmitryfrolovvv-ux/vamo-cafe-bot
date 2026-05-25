@@ -386,18 +386,6 @@ def simple_menu():
     kb.add(
         KeyboardButton("/start")
     )
-    
-    kb.add(
-        KeyboardButton("➕ Add admin")
-    )
-    
-    kb.add(
-        KeyboardButton("📋 Admin list")
-    )
-    
-    kb.add(
-    KeyboardButton("🎁 Create promo")
-    )
 
     return kb
 
@@ -2303,8 +2291,6 @@ async def promo_apply(
     await message.answer(
         f"✅ Promo applied: {discount}%"
     )
-
-    await state.finish()
     
 # =========================
 # RUN
