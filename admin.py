@@ -106,8 +106,17 @@ def admin_menu():
     )
 
     kb.add(
-        KeyboardButton("📦 Orders"),
-        KeyboardButton("📊 Stats")
+    KeyboardButton("📦 Orders"),
+    KeyboardButton("📊 Stats")
+    )
+    
+    kb.add(
+        KeyboardButton("➕ Add admin"),
+        KeyboardButton("📋 Admin list")
+    )
+    
+    kb.add(
+        KeyboardButton("🎁 Create promo")
     )
 
     kb.add(
