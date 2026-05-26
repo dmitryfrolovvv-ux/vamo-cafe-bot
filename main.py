@@ -1496,21 +1496,6 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
     )
     
     await callback.answer()
-        
-        cur.execute(
-            """
-            SELECT COUNT(*)
-            FROM cart
-            WHERE user_id=%s
-            """,
-            (user_id,)
-        )
-        
-        cart_count = cur.fetchone()[0]
-    
-        await callback.answer(
-            get_text(callback.from_user.id, "added_to_cart")
-        )
 
 # =========================
 # OPEN CART
