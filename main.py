@@ -1435,6 +1435,17 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
         )
 
         conn.commit()
+
+        cur.execute(
+            """
+            SELECT category
+            FROM products
+            WHERE product_name=%s
+            """,
+            (product_name,)
+    )
+
+category = cur.fetchone()[0]
         
         cur.execute(
         """
