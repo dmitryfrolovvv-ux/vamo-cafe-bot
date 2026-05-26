@@ -1280,6 +1280,13 @@ async def plus_callback(callback: types.CallbackQuery):
     )
     
     kb.row(
+    InlineKeyboardButton(
+        text=get_text(callback.from_user.id, "back"),
+        callback_data=f"category_{category}"
+        )
+    )
+    
+    kb.row(
         InlineKeyboardButton(
             text=get_text(callback.from_user.id, "back"),
             callback_data=f"category_{category}"
@@ -1356,6 +1363,12 @@ async def minus_callback(callback: types.CallbackQuery):
             text=f"🛒 Cart ({cart_count})",
             callback_data="open_cart"
         )
+    )
+    
+    kb.row(
+    InlineKeyboardButton(
+        text=get_text(callback.from_user.id, "back"),
+        callback_data=f"category_{category}"
     )
 
     kb.row(
@@ -1439,7 +1452,7 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
     )
     cur.execute(
         """
-        SELECT COUNT(*)
+        SELECT COALESCE(SUM(quantity), 0)
         FROM cart
         WHERE user_id=%s
         """,
@@ -1501,7 +1514,7 @@ async def open_cart(callback: types.CallbackQuery):
 
     cur.execute(
         """
-        SELECT product_name, price
+        SELECT COALESCE(SUM(quantity), 0)
         FROM cart
         WHERE user_id=%s
         """,
