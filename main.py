@@ -1401,7 +1401,7 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
     await callback.answer(
         get_text(callback.from_user.id, "added_to_cart")
     )
-        cur.execute(
+    cur.execute(
         """
         SELECT COUNT(*)
         FROM cart
