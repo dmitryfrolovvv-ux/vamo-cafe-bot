@@ -1433,34 +1433,34 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
                 product[0]
             )
         )
-
-conn.commit()
-
-cur.execute(
-    """
-    SELECT category
-    FROM products
-    WHERE product_name=%s
-    """,
-    (product_name,)
-)
-
-category = cur.fetchone()[0]
-
-cur.execute(
-    """
-    SELECT COUNT(*)
-    FROM cart
-    WHERE user_id=%s
-    """,
-    (user_id,)
-)
-
-cart_count = cur.fetchone()[0]
     
-kb = InlineKeyboardMarkup(row_width=3)
+        conn.commit()
     
-kb.row(
+        cur.execute(
+            """
+            SELECT category
+            FROM products
+            WHERE product_name=%s
+            """,
+            (product_name,)
+        )
+    
+        category = cur.fetchone()[0]
+    
+        cur.execute(
+        """
+        SELECT COUNT(*)
+        FROM cart
+        WHERE user_id=%s
+        """,
+        (user_id,)
+    )
+
+    cart_count = cur.fetchone()[0]
+    
+    kb = InlineKeyboardMarkup(row_width=3)
+    
+    kb.row(
         InlineKeyboardButton(
             text="-",
             callback_data=f"minus_{product_name}_{count}_{category}"
@@ -1477,7 +1477,7 @@ kb.row(
         )
     )
     
-kb.row(
+    kb.row(
         InlineKeyboardButton(
             text=get_text(
                 callback.from_user.id,
@@ -1487,14 +1487,14 @@ kb.row(
         )
     )
     
-kb.row(
+    kb.row(
         InlineKeyboardButton(
             text=f"🛒 Cart ({cart_count})",
             callback_data="open_cart"
         )
     )
     
-kb.row(
+    kb.row(
         InlineKeyboardButton(
             text=get_text(callback.from_user.id, "back"),
             callback_data=f"category_{category}"
