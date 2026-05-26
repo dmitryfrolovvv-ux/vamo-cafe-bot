@@ -1460,7 +1460,7 @@ cart_count = cur.fetchone()[0]
     
 kb = InlineKeyboardMarkup(row_width=3)
     
-    kb.row(
+kb.row(
         InlineKeyboardButton(
             text="-",
             callback_data=f"minus_{product_name}_{count}_{category}"
@@ -1477,7 +1477,7 @@ kb = InlineKeyboardMarkup(row_width=3)
         )
     )
     
-    kb.row(
+kb.row(
         InlineKeyboardButton(
             text=get_text(
                 callback.from_user.id,
@@ -1487,14 +1487,14 @@ kb = InlineKeyboardMarkup(row_width=3)
         )
     )
     
-    kb.row(
+kb.row(
         InlineKeyboardButton(
             text=f"🛒 Cart ({cart_count})",
             callback_data="open_cart"
         )
     )
     
-    kb.row(
+kb.row(
         InlineKeyboardButton(
             text=get_text(callback.from_user.id, "back"),
             callback_data=f"category_{category}"
