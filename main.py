@@ -2662,6 +2662,49 @@ async def delete_promo_menu(
         reply_markup=kb
     )
     
+ # =========================
+# CONTACTS
+# =========================
+
+@dp.callback_query_handler(
+    lambda c: c.data == "contacts"
+)
+async def contacts_callback(
+    callback: types.CallbackQuery
+):
+
+    kb = InlineKeyboardMarkup(row_width=1)
+
+    kb.add(
+        InlineKeyboardButton(
+            text=get_text(
+                callback.from_user.id,
+                "open_location"
+            ),
+            url="https://maps.google.com/?q=Mahmutlar+Barbaros+Cd+07450+Alanya"
+        )
+    )
+
+    kb.add(
+        InlineKeyboardButton(
+            text=get_text(
+                callback.from_user.id,
+                "back"
+            ),
+            callback_data="back_main"
+        )
+    )
+
+    await callback.message.answer(
+        get_text(
+            callback.from_user.id,
+            "contacts_text"
+        ),
+        reply_markup=kb
+    )
+
+    await callback.answer()
+    
 # =========================
 # RUN
 # =========================
