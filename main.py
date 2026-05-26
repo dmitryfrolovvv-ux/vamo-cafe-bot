@@ -1367,8 +1367,9 @@ async def minus_callback(callback: types.CallbackQuery):
     
     kb.row(
     InlineKeyboardButton(
-        text=get_text(callback.from_user.id, "back"),
-        callback_data=f"category_{category}"
+            text=get_text(callback.from_user.id, "back"),
+            callback_data=f"category_{category}"
+        )
     )
 
     kb.row(
