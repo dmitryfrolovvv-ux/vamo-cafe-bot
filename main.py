@@ -1434,29 +1434,29 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
             )
         )
 
-        conn.commit()
+conn.commit()
 
-        cur.execute(
-            """
-            SELECT category
-            FROM products
-            WHERE product_name=%s
-            """,
-            (product_name,)
-    )
+cur.execute(
+    """
+    SELECT category
+    FROM products
+    WHERE product_name=%s
+    """,
+    (product_name,)
+)
 
 category = cur.fetchone()[0]
-        
-        cur.execute(
-            """
-            SELECT COUNT(*)
-            FROM cart
-            WHERE user_id=%s
-            """,
-            (user_id,)
-    )
-    
-    cart_count = cur.fetchone()[0]
+
+cur.execute(
+    """
+    SELECT COUNT(*)
+    FROM cart
+    WHERE user_id=%s
+    """,
+    (user_id,)
+)
+
+cart_count = cur.fetchone()[0]
     
     kb = InlineKeyboardMarkup(row_width=3)
     
