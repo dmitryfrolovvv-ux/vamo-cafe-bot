@@ -2292,7 +2292,7 @@ async def promo_apply(
 
     promo = cur.fetchone()
 
-    if not promo:
+if not promo:
 
     await message.answer(
         "❌ Invalid or expired promo"
