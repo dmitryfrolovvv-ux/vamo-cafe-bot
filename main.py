@@ -1458,7 +1458,7 @@ cur.execute(
 
 cart_count = cur.fetchone()[0]
     
-    kb = InlineKeyboardMarkup(row_width=3)
+kb = InlineKeyboardMarkup(row_width=3)
     
     kb.row(
         InlineKeyboardButton(
