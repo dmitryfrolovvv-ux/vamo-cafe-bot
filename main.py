@@ -1491,7 +1491,7 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
     )
     
     await callback.message.edit_caption(
-        caption=callback.message.caption,
+        caption=callback.message.caption + " ",
         reply_markup=kb
     )
     
