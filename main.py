@@ -1494,16 +1494,16 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
         )
     )
     
-try:
-
-    await callback.message.edit_reply_markup(
-        reply_markup=kb
-    )
-
-except:
-    pass
-
-await callback.answer()
+    try:
+    
+        await callback.message.edit_reply_markup(
+            reply_markup=kb
+        )
+    
+    except:
+        pass
+    
+    await callback.answer()
 
 # =========================
 # OPEN CART
