@@ -1270,7 +1270,7 @@ async def plus_callback(callback: types.CallbackQuery):
         (callback.from_user.id,)
     )
     
-    cart_count = cur.fetchone()[0]
+    cart_count = cur.fetchone()[0] + count
     
     kb.row(
         InlineKeyboardButton(
@@ -1349,7 +1349,7 @@ async def minus_callback(callback: types.CallbackQuery):
         (callback.from_user.id,)
     )
 
-    cart_count = cur.fetchone()[0]
+    cart_count = cur.fetchone()[0] + count
 
     kb.row(
         InlineKeyboardButton(
