@@ -1416,21 +1416,23 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
 
     price = price * count
 
-    cur.execute(
-        """
-        INSERT INTO cart(
-            user_id,
-            product_name,
-            price
+    for _ in range(count):
+
+        cur.execute(
+            """
+            INSERT INTO cart(
+                user_id,
+                product_name,
+                price
+            )
+            VALUES(%s,%s,%s)
+            """,
+            (
+                user_id,
+                product_name,
+                product[0]
+            )
         )
-        VALUES(%s,%s,%s)
-        """,
-        (
-            user_id,
-            product_name,
-            price
-        )
-    )
 
     conn.commit()
 
