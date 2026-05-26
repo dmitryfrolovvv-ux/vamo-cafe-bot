@@ -1494,14 +1494,10 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
         )
     )
     
-    try:
-    
-        await callback.message.edit_reply_markup(
-            reply_markup=kb
-        )
-    
-    except:
-        pass
+    await callback.message.edit_caption(
+    caption=callback.message.caption,
+    reply_markup=kb
+)
     
     await callback.answer()
 
