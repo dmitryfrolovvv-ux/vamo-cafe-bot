@@ -1486,6 +1486,13 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
         )
     )
     
+    kb.row(
+    InlineKeyboardButton(
+        text=get_text(callback.from_user.id, "back"),
+        callback_data=f"category_{category}"
+        )
+    )
+    
     await callback.message.edit_reply_markup(
         reply_markup=kb
     )
