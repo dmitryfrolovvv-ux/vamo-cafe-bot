@@ -1261,6 +1261,24 @@ async def plus_callback(callback: types.CallbackQuery):
         )
     )
 
+    cur.execute(
+        """
+        SELECT COUNT(*)
+        FROM cart
+        WHERE user_id=%s
+        """,
+        (callback.from_user.id,)
+    )
+    
+    cart_count = cur.fetchone()[0]
+    
+    kb.row(
+        InlineKeyboardButton(
+            text=f"🛒 Cart ({cart_count})",
+            callback_data="open_cart"
+        )
+    )
+    
     kb.row(
         InlineKeyboardButton(
             text=get_text(callback.from_user.id, "back"),
@@ -1269,9 +1287,9 @@ async def plus_callback(callback: types.CallbackQuery):
     )
 
     await callback.message.edit_reply_markup(
-        reply_markup=kb
+    reply_markup=kb
     )
-
+    
     await callback.answer()
 # =========================
 # MINUS
@@ -1319,6 +1337,24 @@ async def minus_callback(callback: types.CallbackQuery):
             "add_to_cart"
         ),
             callback_data=f"add_{name}_{count}"
+        )
+    )
+
+        cur.execute(
+        """
+        SELECT COUNT(*)
+        FROM cart
+        WHERE user_id=%s
+        """,
+        (callback.from_user.id,)
+    )
+
+    cart_count = cur.fetchone()[0]
+
+    kb.row(
+        InlineKeyboardButton(
+            text=f"🛒 Cart ({cart_count})",
+            callback_data="open_cart"
         )
     )
 
