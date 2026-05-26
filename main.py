@@ -2292,24 +2292,24 @@ async def promo_apply(
 
     promo = cur.fetchone()
 
-if not promo:
-
-    await message.answer(
-        "❌ Invalid or expired promo"
-    )
-
-    await state.finish()
-
-    cur.execute(
-        """
-        SELECT product_name, price
-        FROM cart
-        WHERE user_id=%s
-        """,
-        (user_id,)
-    )
-
-    items = cur.fetchall()
+    if not promo:
+    
+        await message.answer(
+            "❌ Invalid or expired promo"
+        )
+    
+        await state.finish()
+    
+        cur.execute(
+            """
+            SELECT product_name, price
+            FROM cart
+            WHERE user_id=%s
+            """,
+            (user_id,)
+        )
+    
+        items = cur.fetchall()
 
     text = f"{get_text(user_id, 'your_cart')}\n\n"
 
