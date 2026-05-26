@@ -1162,6 +1162,23 @@ async def product_card(callback: types.CallbackQuery):
         )
     )
 
+        cur.execute(
+        """
+        SELECT COUNT(*)
+        FROM cart
+        WHERE user_id=%s
+        """,
+        (callback.from_user.id,)
+    )
+    
+    cart_count = cur.fetchone()[0]
+    
+    kb.row(
+        InlineKeyboardButton(
+            text=f"🛒 Cart ({cart_count})",
+            callback_data="open_cart"
+        )
+    )
     kb.row(
         InlineKeyboardButton(
             text=get_text(
@@ -2277,13 +2294,71 @@ async def promo_apply(
 
     if not promo:
 
-        await message.answer(
-            "❌ Invalid or expired promo"
-        )
+    await message.answer(
+        "❌ Invalid or expired promo"
+    )
 
-        await state.finish()
-        
-        return
+    await state.finish()
+
+    cur.execute(
+        """
+        SELECT product_name, price
+        FROM cart
+        WHERE user_id=%s
+        """,
+        (user_id,)
+    )
+
+    items = cur.fetchall()
+
+    text = f"{get_text(user_id, 'your_cart')}\n\n"
+
+    total = 0
+
+    for item in items:
+
+        text += f"• {item[0]} — {item[1]} TL\n"
+
+        total += item[1]
+
+    text += f"\n💰 Total: {total} TL"
+
+    kb = InlineKeyboardMarkup(row_width=1)
+
+    kb.add(
+        InlineKeyboardButton(
+            text=get_text(user_id, "checkout"),
+            callback_data="checkout"
+        )
+    )
+
+    kb.add(
+        InlineKeyboardButton(
+            text="🎁 Promo code",
+            callback_data="promo_code"
+        )
+    )
+
+    kb.add(
+        InlineKeyboardButton(
+            text=get_text(user_id, "clear_cart"),
+            callback_data="clear_cart"
+        )
+    )
+
+    kb.add(
+        InlineKeyboardButton(
+            text=get_text(user_id, "back"),
+            callback_data="back_main"
+        )
+    )
+
+    await message.answer(
+        text,
+        reply_markup=kb
+    )
+
+    return
 
     # CHECK ALREADY USED
     cur.execute(
