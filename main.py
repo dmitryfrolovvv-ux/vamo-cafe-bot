@@ -1503,7 +1503,7 @@ async def open_cart(callback: types.CallbackQuery):
 
     cur.execute(
         """
-        SELECT COUNT(*)
+        SELECT product_name, price
         FROM cart
         WHERE user_id=%s
         """,
