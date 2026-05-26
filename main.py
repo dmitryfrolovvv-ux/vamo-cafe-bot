@@ -1448,12 +1448,12 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
 category = cur.fetchone()[0]
         
         cur.execute(
-        """
-        SELECT COUNT(*)
-        FROM cart
-        WHERE user_id=%s
-        """,
-        (user_id,)
+            """
+            SELECT COUNT(*)
+            FROM cart
+            WHERE user_id=%s
+            """,
+            (user_id,)
     )
     
     cart_count = cur.fetchone()[0]
