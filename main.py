@@ -1503,7 +1503,7 @@ try:
 except:
     pass
 
-    await callback.answer()
+await callback.answer()
 
 # =========================
 # OPEN CART
