@@ -1285,13 +1285,6 @@ async def plus_callback(callback: types.CallbackQuery):
         callback_data=f"category_{category}"
         )
     )
-    
-    kb.row(
-        InlineKeyboardButton(
-            text=get_text(callback.from_user.id, "back"),
-            callback_data=f"category_{category}"
-        )
-    )
 
     await callback.message.edit_reply_markup(
     reply_markup=kb
@@ -1453,7 +1446,7 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
     )
     cur.execute(
         """
-        SELECT COALESCE(SUM(quantity), 0)
+        SELECT COUNT(*)
         FROM cart
         WHERE user_id=%s
         """,
@@ -1515,7 +1508,7 @@ async def open_cart(callback: types.CallbackQuery):
 
     cur.execute(
         """
-        SELECT COALESCE(SUM(quantity), 0)
+        SELECT COUNT(*)
         FROM cart
         WHERE user_id=%s
         """,
