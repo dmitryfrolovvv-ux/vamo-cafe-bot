@@ -1340,7 +1340,7 @@ async def minus_callback(callback: types.CallbackQuery):
         )
     )
 
-        cur.execute(
+    cur.execute(
         """
         SELECT COUNT(*)
         FROM cart
