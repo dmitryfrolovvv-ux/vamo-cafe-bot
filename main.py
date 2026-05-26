@@ -1162,7 +1162,7 @@ async def product_card(callback: types.CallbackQuery):
         )
     )
 
-        cur.execute(
+    cur.execute(
         """
         SELECT COUNT(*)
         FROM cart
