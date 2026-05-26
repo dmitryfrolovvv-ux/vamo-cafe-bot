@@ -1490,9 +1490,17 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
         )
     )
     
-    await callback.message.edit_caption(
-        caption=callback.message.caption + " ",
+    await callback.message.delete()
+
+    await bot.send_photo(
+        chat_id=callback.message.chat.id,
+        photo=callback.message.photo[-1].file_id,
+        caption=callback.message.caption,
         reply_markup=kb
+    )
+    
+    await callback.answer(
+        get_text(callback.from_user.id, "added_to_cart")
     )
     
     await callback.answer()
