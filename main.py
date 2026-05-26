@@ -2281,6 +2281,8 @@ async def promo_apply(
             "❌ Invalid or expired promo"
         )
 
+        await state.finish()
+        
         return
 
     # CHECK ALREADY USED
