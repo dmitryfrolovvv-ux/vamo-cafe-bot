@@ -1434,9 +1434,9 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
             )
         )
 
-    conn.commit()
-    
-    cur.execute(
+        conn.commit()
+        
+        cur.execute(
         """
         SELECT COUNT(*)
         FROM cart
@@ -1446,17 +1446,13 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
     )
     
     cart_count = cur.fetchone()[0]
-
-    await callback.answer(
-        get_text(callback.from_user.id, "added_to_cart")
-    )
     
     kb = InlineKeyboardMarkup(row_width=3)
     
     kb.row(
         InlineKeyboardButton(
-            text="➖",
-            callback_data=f"minus_{product_name}_{count}_category"
+            text="-",
+            callback_data=f"minus_{product_name}_{count}_{category}"
         ),
     
         InlineKeyboardButton(
@@ -1465,8 +1461,8 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
         ),
     
         InlineKeyboardButton(
-            text="➕",
-            callback_data=f"plus_{product_name}_{count}_category"
+            text="+",
+            callback_data=f"plus_{product_name}_{count}_{category}"
         )
     )
     
@@ -1488,18 +1484,33 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
     )
     
     kb.row(
-    InlineKeyboardButton(
-        text=get_text(callback.from_user.id, "back"),
-        callback_data=f"category_{category}"
+        InlineKeyboardButton(
+            text=get_text(callback.from_user.id, "back"),
+            callback_data=f"category_{category}"
         )
     )
     
     await callback.message.edit_caption(
-    caption=callback.message.caption,
-    reply_markup=kb
-)
+        caption=callback.message.caption,
+        reply_markup=kb
+    )
     
     await callback.answer()
+        
+        cur.execute(
+            """
+            SELECT COUNT(*)
+            FROM cart
+            WHERE user_id=%s
+            """,
+            (user_id,)
+        )
+        
+        cart_count = cur.fetchone()[0]
+    
+        await callback.answer(
+            get_text(callback.from_user.id, "added_to_cart")
+        )
 
 # =========================
 # OPEN CART
