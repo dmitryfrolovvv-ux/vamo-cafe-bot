@@ -1435,10 +1435,7 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
         )
 
     conn.commit()
-
-    await callback.answer(
-        get_text(callback.from_user.id, "added_to_cart")
-    )
+    
     cur.execute(
         """
         SELECT COUNT(*)
@@ -1449,6 +1446,10 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
     )
     
     cart_count = cur.fetchone()[0]
+
+    await callback.answer(
+        get_text(callback.from_user.id, "added_to_cart")
+    )
     
     kb = InlineKeyboardMarkup(row_width=3)
     
@@ -1493,9 +1494,16 @@ async def add_to_cart_callback(callback: types.CallbackQuery):
         )
     )
     
+try:
+
     await callback.message.edit_reply_markup(
         reply_markup=kb
     )
+
+except:
+    pass
+
+    await callback.answer()
 
 # =========================
 # OPEN CART
