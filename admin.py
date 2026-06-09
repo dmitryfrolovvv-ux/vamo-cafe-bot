@@ -140,7 +140,7 @@ def admin_menu():
 # REGISTER
 # =========================
 
-def register_admin(dp, conn, cur, main_menu, is_admin):
+def register_admin(dp, conn, cur, main_menu, is_admin, bot):
 
     # =====================
     # ADMIN PANEL
