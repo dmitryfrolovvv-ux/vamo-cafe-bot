@@ -144,7 +144,7 @@ def register_admin(dp, conn, cur, main_menu):
     @dp.message_handler(commands=["admin"], state="*")
     async def admin_panel(message: types.Message, state: FSMContext):
 
-        if message.from_user.id != ADMIN_ID:
+        if not is_admin(message.from_user.id):
             return
 
         await state.finish()
@@ -817,7 +817,7 @@ def register_admin(dp, conn, cur, main_menu):
     @dp.message_handler(lambda m: "Reset" in m.text, state="*")
     async def reset_btn(message: types.Message, state: FSMContext):
 
-        if message.from_user.id != ADMIN_ID:
+        if not is_admin(message.from_user.id):
             return
 
         await state.finish()
@@ -834,7 +834,7 @@ def register_admin(dp, conn, cur, main_menu):
     @dp.message_handler(lambda m: m.text == "⬅ Back", state="*")
     async def admin_back(message: types.Message, state: FSMContext):
 
-        if message.from_user.id != ADMIN_ID:
+        if not is_admin(message.from_user.id):
             return
 
         await state.finish()
@@ -948,7 +948,7 @@ def register_admin(dp, conn, cur, main_menu):
     @dp.message_handler(lambda m: m.text == "❌ Delete category", state="*")
     async def delete_category_menu(message: types.Message, state: FSMContext):
 
-        if message.from_user.id != ADMIN_ID:
+        if not is_admin(message.from_user.id):
             return
 
         await state.finish()
@@ -1044,7 +1044,7 @@ def register_admin(dp, conn, cur, main_menu):
     @dp.message_handler(lambda m: m.text == "➕ Add product", state="*")
     async def add_product_start(message: types.Message, state: FSMContext):
 
-        if message.from_user.id != ADMIN_ID:
+        if not is_admin(message.from_user.id):
             return
 
         await state.finish()
@@ -1307,7 +1307,7 @@ def register_admin(dp, conn, cur, main_menu):
     @dp.message_handler(lambda m: m.text == "❌ Delete product", state="*")
     async def delete_product_menu(message: types.Message, state: FSMContext):
 
-        if message.from_user.id != ADMIN_ID:
+        if not is_admin(message.from_user.id):
             return
 
         await state.finish()
@@ -1405,7 +1405,7 @@ def register_admin(dp, conn, cur, main_menu):
         state: FSMContext
     ):
 
-        if message.from_user.id != ADMIN_ID:
+        if not is_admin(message.from_user.id):
             return
 
         await state.finish()
@@ -1630,7 +1630,7 @@ def register_admin(dp, conn, cur, main_menu):
     @dp.message_handler(lambda m: m.text == "📦 Orders", state="*")
     async def orders_handler(message: types.Message, state: FSMContext):
 
-        if message.from_user.id != ADMIN_ID:
+        if not is_admin(message.from_user.id):
             return
 
         await state.finish()
@@ -1665,7 +1665,7 @@ def register_admin(dp, conn, cur, main_menu):
     @dp.message_handler(lambda m: m.text == "📊 Stats", state="*")
     async def stats_handler(message: types.Message, state: FSMContext):
 
-        if message.from_user.id != ADMIN_ID:
+        if not is_admin(message.from_user.id):
             return
 
         await state.finish()
