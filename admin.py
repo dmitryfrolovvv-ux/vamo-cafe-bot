@@ -232,12 +232,12 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
 
         except Exception as e:
 
-            print(e)
-
             await message.answer(
-                "❌ Publish error",
+                f"❌ Error:\n{e}",
                 reply_markup=admin_menu()
             )
+        
+            print(e)
 
         await state.finish()
         
