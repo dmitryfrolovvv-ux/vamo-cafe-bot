@@ -422,8 +422,9 @@ register_admin(
     dp,
     conn,
     cur,
-    simple_menu,
-    is_admin
+    main_menu,
+    is_admin,
+    bot
 )
 
 # =========================
