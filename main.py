@@ -82,6 +82,10 @@ class AddAdmin(StatesGroup):
 
     user_id = State()
 
+class ChannelPost(StatesGroup):
+
+    photo = State()
+    
 class PromoCreate(StatesGroup):
 
     code = State()
