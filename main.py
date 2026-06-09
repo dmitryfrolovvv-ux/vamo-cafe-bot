@@ -53,6 +53,19 @@ conn = psycopg2.connect(
 
 cur = conn.cursor()
 
+def is_admin(user_id):
+
+    cur.execute(
+        """
+        SELECT user_id
+        FROM admins
+        WHERE user_id=%s
+        """,
+        (user_id,)
+    )
+
+    return cur.fetchone() is not None
+
 # =========================
 # STATES
 # =========================
@@ -399,6 +412,7 @@ register_admin(
     conn,
     cur,
     simple_menu,
+    is_admin
 )
 
 # =========================
