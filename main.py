@@ -422,7 +422,7 @@ register_admin(
     dp,
     conn,
     cur,
-    main_menu,
+    simple_menu,
     is_admin,
     bot
 )
