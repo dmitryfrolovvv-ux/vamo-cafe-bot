@@ -399,7 +399,6 @@ register_admin(
     conn,
     cur,
     simple_menu,
-    is_admin
 )
 
 # =========================
