@@ -800,6 +800,10 @@ def language_menu():
             text="🇹🇷 Türkçe",
             callback_data="lang_tr"
         )
+
+    kb.add(
+        KeyboardButton("📢 Community")
+        )
     )
 
     return kb
@@ -1798,6 +1802,40 @@ async def checkout_location(
     )
 
     await Checkout.phone.set()
+    
+# =========================
+# TG
+# =========================
+
+@dp.message_handler(
+    lambda m: m.text == "📢 Community"
+)
+async def community_handler(
+    message: types.Message
+):
+
+    kb = InlineKeyboardMarkup(row_width=1)
+
+    kb.add(
+        InlineKeyboardButton(
+            "📢 News Channel",
+            url="https://t.me/vamocafe_news"
+        )
+    )
+
+    kb.add(
+        InlineKeyboardButton(
+            "💬 Community Chat",
+            url="https://t.me/+Edma33dGOVhmNThk"
+        )
+    )
+
+    await message.answer(
+        "Join the VAMO community 👇\n\n"
+        "📢 News, promotions and announcements\n"
+        "💬 Chat with other customers",
+        reply_markup=kb
+    )
 
 # =========================
 # SKIP
