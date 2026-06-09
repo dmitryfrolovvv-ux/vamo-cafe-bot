@@ -160,8 +160,8 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
         )
         
     @dp.message_handler(
-    lambda m: m.text == "📢 Post to channel",
-    state="*"
+        lambda m: m.text == "📢 Post to channel",
+        state="*"
     )
     async def channel_post_start(
         message: types.Message
