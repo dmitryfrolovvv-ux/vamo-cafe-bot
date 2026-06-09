@@ -90,6 +90,9 @@ class AdminStates(StatesGroup):
     
     editing_product_description_tr = State()
 
+class ChannelPost(StatesGroup):
+    photo = State()
+
 # =========================
 # ADMIN MENU
 # =========================
@@ -116,7 +119,8 @@ def admin_menu():
     )
     
     kb.add(
-        KeyboardButton("📋 Admin list")
+        KeyboardButton("📋 Admin list"),
+        KeyboardButton("📢 Post to channel")
     )
     
     kb.add(
@@ -154,7 +158,7 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
             "⚙ ADMIN PANEL",
             reply_markup=admin_menu()
         )
-    
+        
     @dp.message_handler(
         lambda m: m.text == "📦 Product editor",
         state="*"
