@@ -201,13 +201,13 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
     
         await AdminStates.remove_admin.set()
 
-@dp.message_handler(
-    state=AdminStates.remove_admin
-)
-async def remove_admin_finish(
-    message: types.Message,
-    state: FSMContext
-):
+    @dp.message_handler(
+        state=AdminStates.remove_admin
+    )
+    async def remove_admin_finish(
+        message: types.Message,
+        state: FSMContext
+    ):
 
     try:
         admin_id = int(message.text)
