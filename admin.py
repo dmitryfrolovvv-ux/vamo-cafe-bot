@@ -163,9 +163,9 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
         lambda m: m.text == "📢 Post to channel",
         state="*"
     )
-    async def channel_post_start(
-        message: types.Message
-    ):
+async def channel_post_start(
+    message: types.Message
+):
 
     if not is_admin(message.from_user.id):
         return
