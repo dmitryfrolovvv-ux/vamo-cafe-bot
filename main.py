@@ -380,9 +380,10 @@ def inline_main_menu(user_id=None):
     )
     
     kb.row(
-    InlineKeyboardButton(
-        text=get_text(user_id, "contacts"),
-        callback_data="contacts"
+        InlineKeyboardButton(
+            text=get_text(user_id, "contacts"),
+            callback_data="contacts"
+        )
     )
         
     kb.row(
