@@ -160,6 +160,32 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
         )
         
     @dp.message_handler(
+    lambda m: m.text == "📢 Post to channel",
+    state="*"
+    )
+    async def channel_post_start(
+        message: types.Message
+    ):
+
+    if not is_admin(message.from_user.id):
+        return
+
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
+
+    kb.add(
+        KeyboardButton("⬅ Back")
+    )
+
+    await message.answer(
+        "📷 Send photo with caption",
+        reply_markup=kb
+    )
+
+    await ChannelPost.photo.set()
+    
+    @dp.message_handler(
         lambda m: m.text == "📦 Product editor",
         state="*"
     )
