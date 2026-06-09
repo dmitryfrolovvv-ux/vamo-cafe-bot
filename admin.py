@@ -211,10 +211,21 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
         state=AdminStates.remove_admin
     )
     async def remove_admin_finish(
-        message: types.Message,
-        state: FSMContext
+    message: types.Message,
+    state: FSMContext
     ):
-
+    
+        if message.text == "⬅ Back":
+    
+            await state.finish()
+    
+            await message.answer(
+                "⚙ ADMIN PANEL",
+                reply_markup=admin_menu()
+            )
+    
+            return
+    
         try:
             admin_id = int(message.text)
     
