@@ -6,6 +6,7 @@ from aiogram.types import (
     KeyboardButton
 )
 
+OWNER_ID = 1472777680
 ADMIN_ID = 1472777680
 
 
@@ -192,7 +193,12 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
         message: types.Message
     ):
     
-        if not is_admin(message.from_user.id):
+        if message.from_user.id != OWNER_ID:
+    
+            await message.answer(
+                "❌ Only owner can remove admins"
+            )
+    
             return
     
         await message.answer(
@@ -222,6 +228,14 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
                 "❌ You can't remove yourself"
             )
     
+            return
+
+        if admin_id == OWNER_ID:
+
+            await message.answer(
+                "❌ Owner cannot be removed"
+            )
+        
             return
     
         cur.execute(
