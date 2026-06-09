@@ -209,56 +209,56 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
         state: FSMContext
     ):
 
-    try:
-        admin_id = int(message.text)
-
-    except:
-        await message.answer("Invalid ID")
-        return
-
-    if admin_id == message.from_user.id:
-
-        await message.answer(
-            "❌ You can't remove yourself"
+        try:
+            admin_id = int(message.text)
+    
+        except:
+            await message.answer("Invalid ID")
+            return
+    
+        if admin_id == message.from_user.id:
+    
+            await message.answer(
+                "❌ You can't remove yourself"
+            )
+    
+            return
+    
+        cur.execute(
+            """
+            SELECT user_id
+            FROM admins
+            WHERE user_id=%s
+            """,
+            (admin_id,)
         )
-
-        return
-
-    cur.execute(
-        """
-        SELECT user_id
-        FROM admins
-        WHERE user_id=%s
-        """,
-        (admin_id,)
-    )
-
-    admin_exists = cur.fetchone()
-
-    if not admin_exists:
-
-        await message.answer(
-            "❌ Admin not found"
+    
+        admin_exists = cur.fetchone()
+    
+        if not admin_exists:
+    
+            await message.answer(
+                "❌ Admin not found"
+            )
+    
+            return
+    
+        cur.execute(
+            """
+            DELETE FROM admins
+            WHERE user_id=%s
+            """,
+            (admin_id,)
         )
-
-        return
-
-    cur.execute(
-        """
-        DELETE FROM admins
-        WHERE user_id=%s
-        """,
-        (admin_id,)
-    )
-
-    conn.commit()
-
-    await message.answer(
-        f"✅ Admin {admin_id} removed",
-        reply_markup=admin_menu()
-    )
-
-    await state.finish()
+    
+        conn.commit()
+    
+        await message.answer(
+            f"✅ Admin {admin_id} removed",
+            reply_markup=admin_menu()
+        )
+    
+        await state.finish()
     # =====================
     # EDIT PRODUCT
     # =====================
