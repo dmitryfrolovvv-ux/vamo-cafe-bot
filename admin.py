@@ -167,22 +167,22 @@ async def channel_post_start(
     message: types.Message
 ):
 
-    if not is_admin(message.from_user.id):
-        return
-
-    kb = ReplyKeyboardMarkup(
-        resize_keyboard=True
-    )
-
-    kb.add(
-        KeyboardButton("⬅ Back")
-    )
-
-    await message.answer(
-        "📷 Send photo with caption",
-        reply_markup=kb
-    )
-
+        if not is_admin(message.from_user.id):
+            return
+    
+        kb = ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
+    
+        kb.add(
+            KeyboardButton("⬅ Back")
+        )
+    
+        await message.answer(
+            "📷 Send photo with caption",
+            reply_markup=kb
+        )
+    
     await ChannelPost.photo.set()
     
     @dp.message_handler(
