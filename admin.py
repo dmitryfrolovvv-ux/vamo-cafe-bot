@@ -46,6 +46,8 @@ class AdminStates(StatesGroup):
     deleting_category = State()
 
     deleting_product = State()
+
+    remove_admin = State()
     
     edit_category_banner = State()
 
@@ -98,31 +100,29 @@ def admin_menu():
     )
 
     kb.add(
-        KeyboardButton("📦 Product editor")
-    )
-    
-    kb.add(
+        KeyboardButton("📦 Product editor"),
         KeyboardButton("📂 Category editor")
     )
 
     kb.add(
-    KeyboardButton("📦 Orders"),
-    KeyboardButton("📊 Stats")
+        KeyboardButton("📦 Orders"),
+        KeyboardButton("📊 Stats")
     )
     
     kb.add(
         KeyboardButton("➕ Add admin"),
+        KeyboardButton("➖ Remove admin")
+    )
+    
+    kb.add(
         KeyboardButton("📋 Admin list")
     )
     
     kb.add(
-        KeyboardButton("🎁 Create promo")
-    )
-    
-    kb.add(
+        KeyboardButton("🎁 Create promo"),
         KeyboardButton("🗑 Delete promo")
     )
-
+    
     kb.add(
         KeyboardButton("♻ Reset"),
         KeyboardButton("⬅ Back")
@@ -184,6 +184,81 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
             reply_markup=kb
         )
         
+    @dp.message_handler(
+        lambda m: m.text == "➖ Remove admin",
+        state="*"
+    )
+    async def remove_admin_start(
+        message: types.Message
+    ):
+    
+        if not is_admin(message.from_user.id):
+            return
+    
+        await message.answer(
+            "Enter admin ID to remove"
+        )
+    
+        await AdminStates.remove_admin.set()
+
+@dp.message_handler(
+    state=AdminStates.remove_admin
+)
+async def remove_admin_finish(
+    message: types.Message,
+    state: FSMContext
+):
+
+    try:
+        admin_id = int(message.text)
+
+    except:
+        await message.answer("Invalid ID")
+        return
+
+    if admin_id == message.from_user.id:
+
+        await message.answer(
+            "❌ You can't remove yourself"
+        )
+
+        return
+
+    cur.execute(
+        """
+        SELECT user_id
+        FROM admins
+        WHERE user_id=%s
+        """,
+        (admin_id,)
+    )
+
+    admin_exists = cur.fetchone()
+
+    if not admin_exists:
+
+        await message.answer(
+            "❌ Admin not found"
+        )
+
+        return
+
+    cur.execute(
+        """
+        DELETE FROM admins
+        WHERE user_id=%s
+        """,
+        (admin_id,)
+    )
+
+    conn.commit()
+
+    await message.answer(
+        f"✅ Admin {admin_id} removed",
+        reply_markup=admin_menu()
+    )
+
+    await state.finish()
     # =====================
     # EDIT PRODUCT
     # =====================
