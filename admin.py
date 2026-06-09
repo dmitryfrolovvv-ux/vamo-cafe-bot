@@ -184,7 +184,63 @@ def register_admin(dp, conn, cur, main_menu, is_admin):
         )
     
         await ChannelPost.photo.set()
-    
+        
+    @dp.message_handler(
+        state=ChannelPost.photo,
+        content_types=types.ContentType.ANY
+    )
+    async def publish_channel_post(
+        message: types.Message,
+        state: FSMContext
+    ):
+
+        if message.text == "⬅ Back":
+
+            await state.finish()
+
+            await message.answer(
+                "⚙ ADMIN PANEL",
+                reply_markup=admin_menu()
+            )
+
+            return
+
+        if message.content_type != "photo":
+
+            await message.answer(
+                "📷 Send photo with caption or press ⬅ Back"
+            )
+
+            return
+
+        try:
+
+            photo = message.photo[-1].file_id
+
+            caption = message.caption or ""
+
+            await bot.send_photo(
+                chat_id="@vamocafe_news",
+                photo=photo,
+                caption=caption
+            )
+
+            await message.answer(
+                "✅ Published to channel",
+                reply_markup=admin_menu()
+            )
+
+        except Exception as e:
+
+            print(e)
+
+            await message.answer(
+                "❌ Publish error",
+                reply_markup=admin_menu()
+            )
+
+        await state.finish()
+        
     @dp.message_handler(
         lambda m: m.text == "📦 Product editor",
         state="*"
