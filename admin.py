@@ -135,7 +135,7 @@ def admin_menu():
 # REGISTER
 # =========================
 
-def register_admin(dp, conn, cur, main_menu):
+def register_admin(dp, conn, cur, main_menu, is_admin):
 
     # =====================
     # ADMIN PANEL
